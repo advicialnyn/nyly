@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>linkstore</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0F1420">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="linkstore">
+<style>
+  :root {
+    --ink: #0F1420;
+    --panel: #161C2C;
+    --panel-2: #1D2437;
+    --line: #262F45;
+    --text: #E8ECF1;
+    --muted: #8B93A7;
+    --amber: #FFB454;
+    --amber-dim: #6B5636;
+    --red: #FF6B6B;
+    --mono: ui-monospace, "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--ink); color: var(--text); font-family: var(--sans); font-size: 15px; }
+  body { padding: 0 0 60px; }
+  header { padding: 32px 20px 20px; max-width: 720px; margin: 0 auto; }
+  .eyebrow { font-family: var(--mono); font-size: 12px; color: var(--amber); letter-spacing: 0.12em; text-transform: uppercase; }
+  .eyebrow::before { content: "\2192  "; }
+  h1 { font-family: var(--mono); font-size: 28px; font-weight: 600; margin: 8px 0 4px; letter-spacing: -0.01em; }
+  h1 .cursor { display: inline-block; width: 10px; height: 22px; background: var(--amber); margin-left: 4px; vertical-align: -3px; animation: blink 1.1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  header p { color: var(--muted); margin: 0; font-size: 14px; line-height: 1.5; }
+  main { max-width: 720px; margin: 0 auto; padding: 0 20px; display: flex; flex-direction: column; gap: 18px; }
+  section.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+  section.panel > h2 { font-family: var(--mono); font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 14px; display: flex; align-items: center; justify-content: space-between; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 6px; font-family: var(--mono); }
+  label:first-of-type { margin-top: 0; }
+  input[type=text], input[type=url], input[type=password] {
+    width: 100%; background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+    padding: 11px 12px; border-radius: 7px; font-size: 15px; font-family: var(--mono);
+  }
+  input:focus { outline: none; border-color: var(--amber); }
+  button { font-family: var(--mono); font-size: 14px; font-weight: 600; border: none; border-radius: 7px; padding: 11px 16px; cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  .btn-primary { background: var(--amber); color: #241a08; width: 100%; margin-top: 14px; }
+  .btn-primary:disabled { background: var(--amber-dim); color: #9c8355; cursor: not-allowed; }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); font-size: 12px; padding: 6px 10px; }
+  .btn-danger { background: transparent; color: var(--red); border: 1px solid #3a2530; font-size: 12px; padding: 6px 10px; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .status { font-family: var(--mono); font-size: 13px; padding: 10px 12px; border-radius: 7px; margin-top: 12px; display: none; }
+  .status.ok { display: block; background: #17301f; color: #7de6a0; }
+  .status.err { display: block; background: #331a1a; color: var(--red); }
+  .status.pending { display: block; background: var(--panel-2); color: var(--muted); }
+  .link-row { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+  .link-row:hover { border-color: var(--amber-dim); }
+  .link-row:last-child { margin-bottom: 0; }
+  .link-info { min-width: 0; flex: 1; }
+  .link-slug { font-family: var(--mono); font-size: 14px; color: var(--amber); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .link-slug .badge { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; border-radius: 4px; padding: 1px 6px; margin-left: 6px; vertical-align: 1px; }
+  .badge.off { background: #331a1a; color: var(--red); }
+  .badge.expired { background: #332a14; color: #e8b95f; }
+  .link-dest { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  .link-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .empty { text-align: center; color: var(--muted); font-family: var(--mono); font-size: 13px; padding: 24px 0; }
+  .locked { text-align: center; padding: 10px 0; }
+  .locked p { color: var(--muted); font-size: 13px; margin: 10px 0 0; }
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0; background: rgba(6,9,15,0.7);
+    align-items: flex-end; justify-content: center; z-index: 50;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px 14px 0 0;
+    width: 100%; max-width: 720px; padding: 20px; max-height: 88vh; overflow-y: auto;
+  }
+  .modal h3 { font-family: var(--mono); font-size: 16px; margin: 0 0 4px; color: var(--amber); word-break: break-all; }
+  .modal .meta { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; margin: 14px 0; }
+  .toggle-row label { margin: 0; }
+  .switch { position: relative; width: 44px; height: 26px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .slider { position: absolute; inset: 0; background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; transition: 0.15s; cursor: pointer; }
+  .switch .slider::before { content: ""; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: var(--muted); border-radius: 50%; transition: 0.15s; }
+  .switch input:checked + .slider { background: var(--amber-dim); border-color: var(--amber); }
+  .switch input:checked + .slider::before { transform: translateX(18px); background: var(--amber); }
+  .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+  .modal-actions .btn-primary { margin-top: 0; }
+  .btn-secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); flex: 1; }
+  .install-bar {
+    display: none; align-items: center; justify-content: space-between; gap: 12px;
+    background: var(--panel); border: 1px solid var(--amber-dim); border-radius: 10px;
+    padding: 12px 14px; margin: 0 20px 18px; max-width: 720px; margin-left: auto; margin-right: auto;
+    font-size: 13px;
+  }
+  .install-bar.show { display: flex; }
+  .install-bar span { color: var(--text); }
+  .install-bar button { background: var(--amber); color: #241a08; padding: 8px 14px; font-size: 13px; }
+  .install-bar .dismiss { background: transparent; color: var(--muted); border: 1px solid var(--line); padding: 8px 10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">cloudflare pages</div>
+  <h1>linkstore<span class="cursor"></span></h1>
+  <p>a short link directory. add a slug, point it at a destination, share the short URL. no token to copy around — just a passphrase.</p>
+</header>
+
+<div class="install-bar" id="installBar">
+  <span id="installText">Install this as an app for quicker access.</span>
+  <div style="display:flex; gap:8px; flex-shrink:0;">
+    <button id="installBtn">Install</button>
+    <button class="dismiss" id="installDismiss">Not now</button>
+  </div>
+</div>
+
+<main>
+
+  <section class="panel" id="lockPanel">
+    <h2>Unlock</h2>
+    <label for="user">Username</label>
+    <input type="text" id="user" placeholder="admin" autocomplete="username" autocapitalize="off">
+    <label for="pw">Password</label>
+    <input type="password" id="pw" placeholder="••••••••" autocomplete="current-password">
+    <button class="btn-primary" id="unlockBtn">Unlock</button>
+    <div class="status" id="lockStatus"></div>
+    <div class="hint">Accounts are set with the <code>ADMIN_USERS</code> environment variable (JSON, e.g. <code>{"nyn":"secret"}</code>) — or use username <code>admin</code> with <code>ADMIN_PASSWORD</code>. Stored only in this browser after unlocking.</div>
+  </section>
+
+  <div id="appPanels" style="display:none; flex-direction:column; gap:18px;">
+    <section class="panel">
+      <h2>New link</h2>
+      <label for="newSlug">Slug <span style="color:var(--muted); text-transform:none;">(optional — random if left blank)</span></label>
+      <input type="text" id="newSlug" placeholder="leave blank for a random slug" autocomplete="off" autocapitalize="off">
+      <label for="newDest">Destination URL</label>
+      <input type="url" id="newDest" placeholder="https://example.com/very/long/path" autocomplete="off">
+      <button class="btn-primary" id="createBtn">Create short link</button>
+      <div class="status" id="createStatus"></div>
+    </section>
+
+    <section class="panel">
+      <h2 id="linksHeading">Links</h2>
+      <div id="linksList"><div class="empty">loading…</div></div>
+    </section>
+  </div>
+
+</main>
+
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <h3 id="modalSlug">/slug</h3>
+    <div class="meta" id="modalMeta"></div>
+
+    <label for="modalAlias">Alias (slug)</label>
+    <input type="text" id="modalAlias" autocomplete="off" autocapitalize="off">
+
+    <label for="modalDest">Destination URL</label>
+    <input type="url" id="modalDest" autocomplete="off">
+
+    <div class="toggle-row">
+      <label style="margin:0;">Enabled</label>
+      <label class="switch">
+        <input type="checkbox" id="modalEnabled">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <label for="modalExpiry">Expires <span style="color:var(--muted); text-transform:none;">(optional)</span></label>
+    <input type="date" id="modalExpiry">
+
+    <div class="modal-actions">
+      <button class="btn-secondary" id="modalCancel">Cancel</button>
+      <button class="btn-primary" id="modalSave" style="margin-top:0; flex:1;">Save</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="modalCopy" style="flex:1; text-align:center;">Copy link</button>
+      <button class="btn-danger" id="modalDelete" style="flex:1; text-align:center;">Delete</button>
+    </div>
+    <div class="status" id="modalStatus"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var USER_KEY = 'ls_admin_user';
+  var PW_KEY = 'ls_admin_pw';
+  var currentLinks = {};
+
+  var els = {
+    lockPanel: document.getElementById('lockPanel'),
+    appPanels: document.getElementById('appPanels'),
+    user: document.getElementById('user'),
+    pw: document.getElementById('pw'),
+    unlockBtn: document.getElementById('unlockBtn'),
+    lockStatus: document.getElementById('lockStatus'),
+    newSlug: document.getElementById('newSlug'),
+    newDest: document.getElementById('newDest'),
+    createBtn: document.getElementById('createBtn'),
+    createStatus: document.getElementById('createStatus'),
+    linksList: document.getElementById('linksList'),
+    linksHeading: document.getElementById('linksHeading'),
+    modalBackdrop: document.getElementById('modalBackdrop'),
+    modalSlug: document.getElementById('modalSlug'),
+    modalMeta: document.getElementById('modalMeta'),
+    modalAlias: document.getElementById('modalAlias'),
+    modalDest: document.getElementById('modalDest'),
+    modalEnabled: document.getElementById('modalEnabled'),
+    modalExpiry: document.getElementById('modalExpiry'),
+    modalCancel: document.getElementById('modalCancel'),
+    modalSave: document.getElementById('modalSave'),
+    modalCopy: document.getElementById('modalCopy'),
+    modalDelete: document.getElementById('modalDelete'),
+    modalStatus: document.getElementById('modalStatus')
+  };
+
+  function user() { return sessionStorage.getItem(USER_KEY) || ''; }
+  function pw() { return sessionStorage.getItem(PW_KEY) || ''; }
+  function setCreds(u, p) { sessionStorage.setItem(USER_KEY, u); sessionStorage.setItem(PW_KEY, p); }
+  function clearCreds() { sessionStorage.removeItem(USER_KEY); sessionStorage.removeItem(PW_KEY); }
+
+  function setStatus(el, kind, text) {
+    el.className = 'status ' + kind;
+    el.textContent = text;
+  }
+
+  function showApp(show) {
+    els.lockPanel.style.display = show ? 'none' : 'block';
+    els.appPanels.style.display = show ? 'flex' : 'none';
+  }
+
+  function api(path, opts) {
+    opts = opts || {};
+    opts.headers = Object.assign({ 'x-admin-user': user(), 'x-admin-password': pw() }, opts.headers || {});
+    return fetch(path, opts).then(function (r) {
+      return r.json().then(function (data) {
+        if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+        return data;
+      });
+    });
+  }
+
+  function shortUrlFor(slug) {
+    return location.origin + '/' + slug;
+  }
+
+  function normalize(value) {
+    if (typeof value === 'string') return { url: value, createdAt: 0, enabled: true, expiresAt: null };
+    return {
+      url: value.url,
+      createdAt: value.createdAt || 0,
+      enabled: value.enabled !== false,
+      expiresAt: value.expiresAt || null
+    };
+  }
+
+  function renderLinks(map) {
+    currentLinks = map;
+    var slugs = Object.keys(map).sort(function (a, b) {
+      return normalize(map[b]).createdAt - normalize(map[a]).createdAt;
+    });
+    els.linksHeading.innerHTML = 'Links (' + slugs.length + ') <button class="btn-ghost" id="lockBtnInline">Lock</button>';
+    document.getElementById('lockBtnInline').addEventListener('click', doLock);
+    if (!slugs.length) {
+      els.linksList.innerHTML = '<div class="empty">no links yet — create one above</div>';
+      return;
+    }
+    els.linksList.innerHTML = '';
+    slugs.forEach(function (slug) {
+      var link = normalize(map[slug]);
+      var row = document.createElement('div');
+      row.className = 'link-row';
+      row.addEventListener('click', function () { openModal(slug); });
+
+      var info = document.createElement('div');
+      info.className = 'link-info';
+      var s = document.createElement('div');
+      s.className = 'link-slug';
+      s.textContent = '/' + slug;
+      if (!link.enabled) {
+        var b = document.createElement('span'); b.className = 'badge off'; b.textContent = 'off'; s.appendChild(b);
+      } else if (link.expiresAt && Date.now() > link.expiresAt) {
+        var b2 = document.createElement('span'); b2.className = 'badge expired'; b2.textContent = 'expired'; s.appendChild(b2);
+      }
+      var d = document.createElement('div');
+      d.className = 'link-dest';
+      d.textContent = link.url;
+      info.appendChild(s);
+      info.appendChild(d);
+
+      var actions = document.createElement('div');
+      actions.className = 'link-actions';
+      var copyBtn = document.createElement('button');
+      copyBtn.className = 'btn-ghost';
+      copyBtn.textContent = 'Copy';
+      copyBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var url = shortUrlFor(slug);
+        if (navigator.clipboard) navigator.clipboard.writeText(url);
+        copyBtn.textContent = 'Copied';
+        setTimeout(function () { copyBtn.textContent = 'Copy'; }, 1200);
+      });
+      actions.appendChild(copyBtn);
+
+      row.appendChild(info);
+      row.appendChild(actions);
+      els.linksList.appendChild(row);
+    });
+  }
+
+  function loadLinks() {
+    els.linksList.innerHTML = '<div class="empty">loading…</div>';
+    api('/api/links').then(function (data) {
+      renderLinks(data.links || {});
+    }).catch(function (e) {
+      if (/unauthorized/i.test(e.message)) { doLock(); return; }
+      els.linksList.innerHTML = '<div class="empty">could not load links — ' + e.message + '</div>';
+    });
+  }
+
+  function doLock() {
+    clearCreds();
+    showApp(false);
+    els.pw.value = '';
+  }
+
+  els.unlockBtn.addEventListener('click', function () {
+    var u = els.user.value.trim() || 'admin';
+    var p = els.pw.value.trim();
+    if (!p) { setStatus(els.lockStatus, 'err', 'enter the password.'); return; }
+    setCreds(u, p);
+    setStatus(els.lockStatus, 'pending', 'checking…');
+    api('/api/links').then(function (data) {
+      setStatus(els.lockStatus, 'ok', 'unlocked');
+      showApp(true);
+      renderLinks(data.links || {});
+    }).catch(function (e) {
+      clearCreds();
+      setStatus(els.lockStatus, 'err', /unauthorized/i.test(e.message) ? 'wrong username or password.' : e.message);
+    });
+  });
+
+  function slugify(s) {
+    return s.trim().toLowerCase().replace(/[^a-z0-9\-_]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+
+  els.createBtn.addEventListener('click', function () {
+    var slug = slugify(els.newSlug.value || '');
+    var dest = els.newDest.value.trim();
+    if (!/^https?:\/\//i.test(dest)) { setStatus(els.createStatus, 'err', 'destination must start with http:// or https://'); return; }
+
+    els.createBtn.disabled = true;
+    setStatus(els.createStatus, 'pending', 'saving…');
+
+    api('/api/links', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: slug, dest: dest }) })
+      .then(function () {
+        setStatus(els.createStatus, 'ok', 'created ' + shortUrlFor(slug));
+        els.newSlug.value = '';
+        els.newDest.value = '';
+        loadLinks();
+      })
+      .catch(function (e) {
+        setStatus(els.createStatus, 'err', e.message);
+      })
+      .finally(function () {
+        els.createBtn.disabled = false;
+      });
+  });
+
+  // --- detail / edit modal ---
+  var modalOriginalSlug = null;
+
+  function openModal(slug) {
+    var link = normalize(currentLinks[slug]);
+    modalOriginalSlug = slug;
+    els.modalSlug.textContent = '/' + slug;
+    els.modalMeta.textContent = link.createdAt ? ('created ' + new Date(link.createdAt).toLocaleString()) : 'created before this update — no timestamp recorded';
+    els.modalAlias.value = slug;
+    els.modalDest.value = link.url;
+    els.modalEnabled.checked = link.enabled;
+    els.modalExpiry.value = link.expiresAt ? new Date(link.expiresAt).toISOString().slice(0, 10) : '';
+    els.modalStatus.className = 'status';
+    els.modalBackdrop.classList.add('show');
+  }
+
+  function closeModal() {
+    els.modalBackdrop.classList.remove('show');
+    modalOriginalSlug = null;
+  }
+
+  els.modalCancel.addEventListener('click', closeModal);
+  els.modalBackdrop.addEventListener('click', function (e) {
+    if (e.target === els.modalBackdrop) closeModal();
+  });
+
+  els.modalCopy.addEventListener('click', function () {
+    var url = shortUrlFor(modalOriginalSlug);
+    if (navigator.clipboard) navigator.clipboard.writeText(url);
+    els.modalCopy.textContent = 'Copied';
+    setTimeout(function () { els.modalCopy.textContent = 'Copy link'; }, 1200);
+  });
+
+  els.modalDelete.addEventListener('click', function () {
+    if (!confirm('Delete short link "' + modalOriginalSlug + '"?')) return;
+    els.modalDelete.disabled = true;
+    api('/api/links', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: modalOriginalSlug }) })
+      .then(function () { closeModal(); loadLinks(); })
+      .catch(function (e) {
+        setStatus(els.modalStatus, 'err', e.message);
+        els.modalDelete.disabled = false;
+      });
+  });
+
+  els.modalSave.addEventListener('click', function () {
+    var newSlug = slugify(els.modalAlias.value || '');
+    var dest = els.modalDest.value.trim();
+    if (!newSlug) { setStatus(els.modalStatus, 'err', 'alias cannot be empty.'); return; }
+    if (!/^https?:\/\//i.test(dest)) { setStatus(els.modalStatus, 'err', 'destination must start with http:// or https://'); return; }
+
+    var body = {
+      slug: modalOriginalSlug,
+      newSlug: newSlug,
+      dest: dest,
+      enabled: els.modalEnabled.checked
+    };
+    if (els.modalExpiry.value) {
+      body.expiresAt = new Date(els.modalExpiry.value + 'T23:59:59').getTime();
+    } else {
+      body.clearExpiry = true;
+    }
+
+    els.modalSave.disabled = true;
+    setStatus(els.modalStatus, 'pending', 'saving…');
+    api('/api/links', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function () {
+        closeModal();
+        loadLinks();
+      })
+      .catch(function (e) {
+        setStatus(els.modalStatus, 'err', e.message);
+      })
+      .finally(function () {
+        els.modalSave.disabled = false;
+      });
+  });
+
+  // Auto-unlock if credentials are already in this session.
+  if (user() && pw()) {
+    api('/api/links').then(function (data) {
+      showApp(true);
+      renderLinks(data.links || {});
+    }).catch(function () {
+      clearCreds();
+      showApp(false);
+    });
+  }
+
+  // --- PWA install ---
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(function () {});
+  }
+
+  var installBar = document.getElementById('installBar');
+  var installText = document.getElementById('installText');
+  var installBtn = document.getElementById('installBtn');
+  var installDismiss = document.getElementById('installDismiss');
+  var deferredPrompt = null;
+  var DISMISS_KEY = 'ls_install_dismissed';
+
+  function isStandalone() {
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  }
+  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  if (!isStandalone() && !localStorage.getItem(DISMISS_KEY)) {
+    if (isIOS) {
+      installText.textContent = 'Install this app: tap Share, then "Add to Home Screen".';
+      installBtn.style.display = 'none';
+      installBar.classList.add('show');
+    } else {
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        deferredPrompt = e;
+        installBar.classList.add('show');
+      });
+    }
+  }
+
+  installBtn.addEventListener('click', function () {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.finally(function () {
+      deferredPrompt = null;
+      installBar.classList.remove('show');
+    });
+  });
+
+  installDismiss.addEventListener('click', function () {
+    localStorage.setItem(DISMISS_KEY, '1');
+    installBar.classList.remove('show');
+  });
+})();
+</script>
+</body>
+</html>
