@@ -58,11 +58,5 @@
     "createdAt": 1785415787041,
     "enabled": true,
     "expiresAt": null
-  },
-  "tft": {
-    "url": "https://github.com/ayushjaipuriyar/animepahe-dl",
-    "createdAt": 1785415815192,
-    "enabled": true,
-    "expiresAt": null
   }
 }
