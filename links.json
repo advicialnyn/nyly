@@ -52,5 +52,11 @@
     "createdAt": 1785499591126,
     "enabled": true,
     "expiresAt": null
+  },
+  "hsc7g3": {
+    "url": "https://example.com/page",
+    "createdAt": 1785499691787,
+    "enabled": true,
+    "expiresAt": null
   }
 }
