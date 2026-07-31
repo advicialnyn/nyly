@@ -58,5 +58,11 @@
     "createdAt": 1785499691787,
     "enabled": true,
     "expiresAt": null
+  },
+  "phyprac": {
+    "url": "https://drive.google.com/drive/folders/11Dwu0pb8a2C7h6d0ttG2eKUqvezru37i",
+    "createdAt": 1785499729678,
+    "enabled": true,
+    "expiresAt": null
   }
 }
