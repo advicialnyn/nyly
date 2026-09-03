@@ -70,6 +70,13 @@ export async function writeLinks(env, map, sha, message) {
 // Supports multiple accounts via the ADMIN_USERS env var, a JSON object like
 // {"nyn":"secret1","friend":"secret2"}. ADMIN_PASSWORD (if set) still works
 // too, as a built-in account named "admin", so existing setups keep working.
+export async function deleteLink(env, slug) {
+  const { map, sha } = await readLinks(env);
+  if (!(slug in map)) throw new Error(`slug "${slug}" not found`);
+  delete map[slug];
+  await writeLinks(env, map, sha, `remove short link: ${slug}`);
+}
+
 export function isAuthed(request, env) {
   const user = request.headers.get('x-admin-user') || '';
   const pass = request.headers.get('x-admin-password') || '';
