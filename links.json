@@ -76,5 +76,11 @@
     "createdAt": 1788430251884,
     "enabled": true,
     "expiresAt": null
+  },
+  "b3edjy": {
+    "url": "https://api.smsq.global/api/v2/SendSMS",
+    "createdAt": 1788432154431,
+    "enabled": true,
+    "expiresAt": null
   }
 }
