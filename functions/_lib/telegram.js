@@ -38,7 +38,7 @@ function block(shortUrl, dest, opts) {
 }
 
 function withDividers(blocks) {
-  return DIVIDER + '\n\n' + blocks.join('\n\n' + DIVIDER + '\n\n') + '\n\n' + DIVIDER;
+  return DIVIDER + '\n' + blocks.join('\n' + DIVIDER + '\n') + '\n' + DIVIDER;
 }
 
 export function botReplyButtons(dest) {
