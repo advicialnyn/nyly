@@ -88,5 +88,11 @@
     "createdAt": 1788432156075,
     "enabled": true,
     "expiresAt": null
+  },
+  "4vux8n": {
+    "url": "https://api.smsq.global/api/v2/SendSMS",
+    "createdAt": 1788432157644,
+    "enabled": true,
+    "expiresAt": null
   }
 }
