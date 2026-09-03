@@ -26,34 +26,40 @@ function escapeHtml(s) {
     .replace(/>/g, '&gt;');
 }
 
-function truncateUrl(url, max = 46) {
-  if (url.length <= max) return url;
-  return url.slice(0, max) + '…';
+const DIVIDER = '••••••';
+
+// One entry: short link (tap to copy) then the full destination underneath.
+// Optional status tag (e.g. "off", "expired") and source tag (e.g. "telegram").
+function block(shortUrl, dest, opts) {
+  opts = opts || {};
+  const tag = opts.status ? ` [${opts.status}]` : '';
+  const via = opts.source ? `via - ${escapeHtml(opts.source)}\n` : '';
+  return `${via}🔗 <code>${escapeHtml(shortUrl)}</code>${tag}\n${escapeHtml(dest)}`;
 }
 
-// Private reply to whoever used the bot: short link in mono, a truncated
-// (but still clickable) version of the destination, and an "Open" button.
-export function formatBotReply(env, shortUrl, dest) {
-  const host = (env.SITE_URL || shortUrl).replace(/^https?:\/\//, '').replace(/\/$/, '');
-  return (
-    `🔗 <b>Shortened with ${escapeHtml(host)}</b>\n\n` +
-    `<code>${escapeHtml(shortUrl)}</code>\n\n` +
-    `📎 <a href="${dest}">${escapeHtml(truncateUrl(dest))}</a>`
-  );
+function withDividers(blocks) {
+  return DIVIDER + '\n\n' + blocks.join('\n\n' + DIVIDER + '\n\n') + '\n\n' + DIVIDER;
 }
 
 export function botReplyButtons(dest) {
   return { reply_markup: JSON.stringify({ inline_keyboard: [[{ text: 'Open', url: dest }]] }) };
 }
 
-// Reply after shortening several links at once — one line per result.
+// Single link created — private reply to whoever used the bot.
+export function formatBotReply(env, shortUrl, dest) {
+  const host = (env.SITE_URL || shortUrl).replace(/^https?:\/\//, '').replace(/\/$/, '');
+  return `🔗 <b>Shortened with ${escapeHtml(host)}</b>\n\n` + withDividers([block(shortUrl, dest)]);
+}
+
+// Several links created at once — same block/divider pattern, one per link.
 export function formatMultiReply(env, results) {
   const host = (env.SITE_URL || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
-  const lines = results.map((r) => {
+  const okCount = results.filter((r) => !r.error).length;
+  const blocks = results.map((r) => {
     if (r.error) return `✘ ${escapeHtml(r.line)}\n   ${escapeHtml(r.error)}`;
-    return `✅ <code>${escapeHtml(r.shortUrl)}</code>\n   → ${escapeHtml(truncateUrl(r.dest))}`;
+    return block(r.shortUrl, r.dest);
   });
-  return `🔗 <b>Shortened ${results.filter((r) => !r.error).length} link(s) with ${escapeHtml(host)}</b>\n\n` + lines.join('\n\n');
+  return `🔗 <b>Shortened ${okCount} link(s) with ${escapeHtml(host)}</b>\n\n` + withDividers(blocks);
 }
 
 export function multiReplyButtons(results) {
@@ -65,22 +71,29 @@ export function multiReplyButtons(results) {
   return { reply_markup: JSON.stringify({ inline_keyboard: rows }) };
 }
 
-// Plain-text summary for /list — Telegram messages have a length limit, so
-// this caps how many links are shown at once.
+// /list — same divider pattern, with an [off]/[expired] tag where relevant.
 export function formatLinkList(env, entries, offset, total) {
   const host = (env.SITE_URL || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
   if (!entries.length) return 'No links yet.';
-  const lines = entries.map((e) => {
-    const status = !e.enabled ? ' [off]' : (e.expiresAt && Date.now() > e.expiresAt ? ' [expired]' : '');
-    return `/${escapeHtml(e.slug)}${status}\n${escapeHtml(e.url)}`;
+  const blocks = entries.map((e) => {
+    const status = !e.enabled ? 'off' : (e.expiresAt && Date.now() > e.expiresAt ? 'expired' : null);
+    const shortUrl = `${host}/${e.slug}`;
+    return block(shortUrl, e.url, { status: status });
   });
-  let out = `🔗 <b>Links ${offset + 1}–${offset + entries.length} of ${total}</b> (on ${escapeHtml(host)})\n\n` + lines.join('\n\n');
+  let out = `🔗 <b>Links ${offset + 1}–${offset + entries.length} of ${total}</b> (on ${escapeHtml(host)})\n\n` + withDividers(blocks);
   if (offset + entries.length < total) out += `\n\nSend /list ${offset + entries.length} to see more.`;
   return out;
 }
 
-// Channel log: short link (mono) + source tag, then the full destination.
+// Channel log — same divider pattern, with a "via - source" line per entry.
 export function formatLinkAnnouncement(env, slug, dest, source) {
   const shortUrl = `${(env.SITE_URL || '').replace(/\/$/, '')}/${slug}`;
-  return `<code>${escapeHtml(shortUrl)}</code> · ${escapeHtml(source)}\n${escapeHtml(dest)}`;
+  return withDividers([block(shortUrl, dest, { source: source })]);
+}
+
+// Multiple links announced to the channel at once — same pattern, one call.
+export function formatMultiAnnouncement(env, results, source) {
+  const blocks = results.filter((r) => !r.error).map((r) => block(r.shortUrl, r.dest, { source: source }));
+  if (!blocks.length) return null;
+  return withDividers(blocks);
 }
