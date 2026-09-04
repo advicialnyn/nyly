@@ -1,7 +1,7 @@
-import { readLinks, normalizeLink } from './_lib/github.js';
+import { readLinks, normalizeLink, incrementCount } from './_lib/github.js';
 
 export async function onRequestGet(context) {
-  const { params, env } = context;
+  const { params, env, waitUntil } = context;
   const slug = params.slug;
 
   try {
@@ -10,6 +10,9 @@ export async function onRequestGet(context) {
       const link = normalizeLink(map[slug]);
       if (!link.enabled) return new Response(statusHtml(slug, 'this link is disabled'), { status: 404, headers: { 'content-type': 'text/html; charset=utf-8' } });
       if (link.expiresAt && Date.now() > link.expiresAt) return new Response(statusHtml(slug, 'this link has expired'), { status: 404, headers: { 'content-type': 'text/html; charset=utf-8' } });
+      // Counting happens after the redirect is already on its way to the
+      // visitor — waitUntil keeps it running instead of getting cut off.
+      waitUntil(incrementCount(env, slug).catch(() => {}));
       return Response.redirect(link.url, 302);
     }
   } catch (e) {
