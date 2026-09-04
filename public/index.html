@@ -69,22 +69,46 @@
   .status.ok { display: block; background: #17301f; color: #7de6a0; }
   .status.err { display: block; background: #331a1a; color: var(--red); }
   .status.pending { display: block; background: var(--panel-2); color: var(--muted); }
-  .link-row { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
-  .link-row:hover { border-color: var(--amber-dim); }
-  .link-row:last-child { margin-bottom: 0; }
-  .link-info { min-width: 0; flex: 1; }
-  .link-slug { font-family: var(--mono); font-size: 14px; color: var(--amber); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .link-slug .badge { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; border-radius: 4px; padding: 1px 6px; margin-left: 6px; vertical-align: 1px; }
+  .link-card { border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; background: var(--panel-2); }
+  .link-card:last-child { margin-bottom: 0; }
+  .card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .card-date { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .switch.mini { width: 38px; height: 22px; }
+  .switch.mini .slider::before { width: 14px; height: 14px; }
+  .switch.mini input:checked + .slider::before { transform: translateX(16px); }
+  .card-dest-row { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
+  .card-dest-row .icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+  .card-dest-row .link-dest { font-size: 12px; color: var(--muted); word-break: break-all; }
+  .card-divider { height: 1px; background: var(--line); margin: 0 0 10px; }
+  .short-url-row { margin-bottom: 12px; }
+  .short-url-row .link-slug { font-family: var(--mono); font-size: 14px; color: var(--amber); word-break: break-all; cursor: pointer; }
+  .short-url-row .link-slug .badge { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; border-radius: 4px; padding: 1px 6px; margin-left: 6px; vertical-align: 1px; }
   .badge.off { background: #331a1a; color: var(--red); }
   .badge.expired { background: #332a14; color: #e8b95f; }
-  .link-dest { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  .icon-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .icon-btn {
+    width: 38px; height: 38px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center; font-size: 15px; cursor: pointer; color: var(--text);
+    padding: 0;
+  }
+  .icon-btn:hover { border-color: var(--amber-dim); }
+  .icon-btn.danger { color: var(--red); }
+  .card-bottom { display: flex; align-items: center; gap: 8px; }
   .click-pill {
-    font-family: var(--mono); font-size: 11px; color: var(--text); background: var(--panel-2);
+    font-family: var(--mono); font-size: 11px; color: var(--text); background: var(--panel);
     border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; flex-shrink: 0;
     display: flex; align-items: center; gap: 4px; white-space: nowrap;
   }
   .click-pill .n { color: var(--amber); font-weight: 600; }
-  .link-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .qr-backdrop {
+    display: none; position: fixed; inset: 0; background: rgba(6,9,15,0.7);
+    align-items: center; justify-content: center; z-index: 60; padding: 24px;
+  }
+  .qr-backdrop.show { display: flex; }
+  .qr-box { background: #fff; border-radius: 14px; padding: 20px; text-align: center; max-width: 280px; }
+  .qr-box img { width: 220px; height: 220px; display: block; }
+  .qr-box .short-url-label { font-family: var(--mono); font-size: 12px; color: #333; margin-top: 10px; word-break: break-all; }
+  .qr-box button { margin-top: 14px; width: 100%; }
   .empty { text-align: center; color: var(--muted); font-family: var(--mono); font-size: 13px; padding: 24px 0; }
   .locked { text-align: center; padding: 10px 0; }
   .locked p { color: var(--muted); font-size: 13px; margin: 10px 0 0; }
@@ -207,6 +231,14 @@
   </div>
 </div>
 
+<div class="qr-backdrop" id="qrBackdrop">
+  <div class="qr-box">
+    <img id="qrImg" alt="QR code" src="">
+    <div class="short-url-label" id="qrLabel"></div>
+    <button class="btn-secondary" id="qrClose">Close</button>
+  </div>
+</div>
+
 <script>
 (function () {
   var USER_KEY = 'ls_admin_user';
@@ -253,7 +285,11 @@
     modalSave: document.getElementById('modalSave'),
     modalCopy: document.getElementById('modalCopy'),
     modalDelete: document.getElementById('modalDelete'),
-    modalStatus: document.getElementById('modalStatus')
+    modalStatus: document.getElementById('modalStatus'),
+    qrBackdrop: document.getElementById('qrBackdrop'),
+    qrImg: document.getElementById('qrImg'),
+    qrLabel: document.getElementById('qrLabel'),
+    qrClose: document.getElementById('qrClose')
   };
 
   function user() { return sessionStorage.getItem(USER_KEY) || ''; }
@@ -311,51 +347,143 @@
     els.linksList.innerHTML = '';
     slugs.forEach(function (slug) {
       var link = normalize(map[slug]);
-      var row = document.createElement('div');
-      row.className = 'link-row';
-      row.addEventListener('click', function () { openModal(slug); });
+      var shortUrl = shortUrlFor(slug);
+      var card = document.createElement('div');
+      card.className = 'link-card';
 
-      var info = document.createElement('div');
-      info.className = 'link-info';
-      var s = document.createElement('div');
+      // top row: enable toggle + created date
+      var top = document.createElement('div');
+      top.className = 'card-top';
+      var toggleLabel = document.createElement('label');
+      toggleLabel.className = 'switch mini';
+      var toggleInput = document.createElement('input');
+      toggleInput.type = 'checkbox';
+      toggleInput.checked = link.enabled;
+      toggleInput.addEventListener('change', function () {
+        toggleInput.disabled = true;
+        api('/api/links', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: slug, enabled: toggleInput.checked }) })
+          .then(loadLinks)
+          .catch(function (e) { alert('Failed: ' + e.message); toggleInput.checked = !toggleInput.checked; toggleInput.disabled = false; });
+      });
+      var toggleSlider = document.createElement('span');
+      toggleSlider.className = 'slider';
+      toggleLabel.appendChild(toggleInput);
+      toggleLabel.appendChild(toggleSlider);
+      var dateEl = document.createElement('div');
+      dateEl.className = 'card-date';
+      dateEl.textContent = link.createdAt ? new Date(link.createdAt).toLocaleDateString() : '—';
+      top.appendChild(toggleLabel);
+      top.appendChild(dateEl);
+
+      // destination row
+      var destRow = document.createElement('div');
+      destRow.className = 'card-dest-row';
+      var icon = document.createElement('span');
+      icon.className = 'icon';
+      icon.textContent = '🔗';
+      var dest = document.createElement('div');
+      dest.className = 'link-dest';
+      dest.textContent = link.url;
+      destRow.appendChild(icon);
+      destRow.appendChild(dest);
+
+      var divider = document.createElement('div');
+      divider.className = 'card-divider';
+
+      // short url row
+      var shortRow = document.createElement('div');
+      shortRow.className = 'short-url-row';
+      var s = document.createElement('span');
       s.className = 'link-slug';
-      s.textContent = '/' + slug;
+      s.textContent = shortUrl.replace(/^https?:\/\//, '');
+      s.title = 'Tap to copy';
+      s.addEventListener('click', function () { copyToClipboard(shortUrl, s); });
       if (!link.enabled) {
         var b = document.createElement('span'); b.className = 'badge off'; b.textContent = 'off'; s.appendChild(b);
       } else if (link.expiresAt && Date.now() > link.expiresAt) {
         var b2 = document.createElement('span'); b2.className = 'badge expired'; b2.textContent = 'expired'; s.appendChild(b2);
       }
-      var d = document.createElement('div');
-      d.className = 'link-dest';
-      d.textContent = link.url;
-      info.appendChild(s);
-      info.appendChild(d);
+      shortRow.appendChild(s);
 
+      // icon action row
+      var iconRow = document.createElement('div');
+      iconRow.className = 'icon-row';
+
+      var copyBtn = document.createElement('button');
+      copyBtn.className = 'icon-btn';
+      copyBtn.title = 'Copy short link';
+      copyBtn.textContent = '📋';
+      copyBtn.addEventListener('click', function () { copyToClipboard(shortUrl, copyBtn); });
+
+      var openBtn = document.createElement('button');
+      openBtn.className = 'icon-btn';
+      openBtn.title = 'Open destination';
+      openBtn.textContent = '↗';
+      openBtn.addEventListener('click', function () { window.open(link.url, '_blank', 'noopener'); });
+
+      var editBtn = document.createElement('button');
+      editBtn.className = 'icon-btn';
+      editBtn.title = 'Edit / rename / expiry';
+      editBtn.textContent = '✎';
+      editBtn.addEventListener('click', function () { openModal(slug); });
+
+      var qrBtn = document.createElement('button');
+      qrBtn.className = 'icon-btn';
+      qrBtn.title = 'QR code';
+      qrBtn.textContent = '▦';
+      qrBtn.addEventListener('click', function () { showQr(shortUrl); });
+
+      var delBtn = document.createElement('button');
+      delBtn.className = 'icon-btn danger';
+      delBtn.title = 'Delete';
+      delBtn.textContent = '🗑';
+      delBtn.addEventListener('click', function () {
+        if (!confirm('Delete short link "' + slug + '"?')) return;
+        api('/api/links', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: slug }) })
+          .then(loadLinks)
+          .catch(function (e) { alert('Delete failed: ' + e.message); });
+      });
+
+      iconRow.appendChild(copyBtn);
+      iconRow.appendChild(openBtn);
+      iconRow.appendChild(editBtn);
+      iconRow.appendChild(qrBtn);
+      iconRow.appendChild(delBtn);
+
+      // footer: click count
+      var bottom = document.createElement('div');
+      bottom.className = 'card-bottom';
       var pill = document.createElement('div');
       pill.className = 'click-pill';
       var count = currentCounts[slug] || 0;
       pill.innerHTML = '<span class="n">' + count + '</span> click' + (count === 1 ? '' : 's');
+      bottom.appendChild(pill);
 
-      var actions = document.createElement('div');
-      actions.className = 'link-actions';
-      var copyBtn = document.createElement('button');
-      copyBtn.className = 'btn-ghost';
-      copyBtn.textContent = 'Copy';
-      copyBtn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        var url = shortUrlFor(slug);
-        if (navigator.clipboard) navigator.clipboard.writeText(url);
-        copyBtn.textContent = 'Copied';
-        setTimeout(function () { copyBtn.textContent = 'Copy'; }, 1200);
-      });
-      actions.appendChild(copyBtn);
-
-      row.appendChild(info);
-      row.appendChild(pill);
-      row.appendChild(actions);
-      els.linksList.appendChild(row);
+      card.appendChild(top);
+      card.appendChild(destRow);
+      card.appendChild(divider);
+      card.appendChild(shortRow);
+      card.appendChild(iconRow);
+      card.appendChild(bottom);
+      els.linksList.appendChild(card);
     });
   }
+
+  function copyToClipboard(text, btnEl) {
+    if (navigator.clipboard) navigator.clipboard.writeText(text);
+    var original = btnEl.textContent;
+    btnEl.textContent = '✓';
+    setTimeout(function () { btnEl.textContent = original; }, 1000);
+  }
+
+  function showQr(shortUrl) {
+    var size = '220x220';
+    els.qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + '&data=' + encodeURIComponent(shortUrl);
+    els.qrLabel.textContent = shortUrl;
+    els.qrBackdrop.classList.add('show');
+  }
+  els.qrClose.addEventListener('click', function () { els.qrBackdrop.classList.remove('show'); });
+  els.qrBackdrop.addEventListener('click', function (e) { if (e.target === els.qrBackdrop) els.qrBackdrop.classList.remove('show'); });
 
   function loadLinks() {
     els.linksList.innerHTML = '<div class="empty">loading…</div>';
