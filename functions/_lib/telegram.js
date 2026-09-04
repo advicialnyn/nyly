@@ -26,7 +26,7 @@ function escapeHtml(s) {
     .replace(/>/g, '&gt;');
 }
 
-const DIVIDER = '•••••••••••••••••••••••';
+const DIVIDER = '•••••••••••••••••••';
 
 // One entry: short link (tap to copy) then the full destination underneath.
 // Optional status tag (e.g. "off", "expired") and source tag (e.g. "telegram").
