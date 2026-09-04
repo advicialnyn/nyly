@@ -1,4 +1,4 @@
-import { readLinks, writeLinks, isAuthed, slugify, createLink, updateLink } from '../_lib/github.js';
+import { readLinks, isAuthed, slugify, createLink, updateLink, deleteLink, readCounts } from '../_lib/github.js';
 import { notifyChannel, formatLinkAnnouncement } from '../_lib/telegram.js';
 
 function json(data, status = 200) {
@@ -13,7 +13,13 @@ export async function onRequestGet(context) {
   if (!isAuthed(request, env)) return json({ error: 'unauthorized' }, 401);
   try {
     const { map } = await readLinks(env);
-    return json({ links: map });
+    let counts = {};
+    try {
+      counts = (await readCounts(env)).map;
+    } catch (e) {
+      // counts.json may not exist yet — that's fine, just show 0s
+    }
+    return json({ links: map, counts: counts });
   } catch (e) {
     return json({ error: e.message }, 500);
   }
@@ -36,7 +42,7 @@ export async function onRequestPost(context) {
   try {
     const finalSlug = await createLink(env, { slug: slug || null, dest, message: `add short link: ${slug || '(auto)'}` });
     try {
-      await notifyChannel(env, formatLinkAnnouncement(env, finalSlug, dest));
+      await notifyChannel(env, formatLinkAnnouncement(env, finalSlug, dest, 'website'));
     } catch (e) {
       // Don't fail link creation just because the Telegram announcement failed.
     }
@@ -90,10 +96,7 @@ export async function onRequestDelete(context) {
   if (!slug) return json({ error: 'slug is required' }, 400);
 
   try {
-    const { map, sha } = await readLinks(env);
-    if (!(slug in map)) return json({ error: 'slug not found' }, 404);
-    delete map[slug];
-    await writeLinks(env, map, sha, `remove short link: ${slug}`);
+    await deleteLink(env, slug);
     return json({ ok: true });
   } catch (e) {
     return json({ error: e.message }, 500);
