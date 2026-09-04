@@ -14,8 +14,8 @@ function b64DecodeUnicode(str) {
   return new TextDecoder().decode(bytes);
 }
 
-function contentsUrl(env) {
-  return `https://api.github.com/repos/${env.GITHUB_OWNER}/${env.GITHUB_REPO}/contents/links.json`;
+function contentsUrl(env, filename) {
+  return `https://api.github.com/repos/${env.GITHUB_OWNER}/${env.GITHUB_REPO}/contents/${filename}`;
 }
 
 function ghHeaders(env) {
@@ -26,9 +26,9 @@ function ghHeaders(env) {
   };
 }
 
-export async function readLinks(env) {
+async function readJsonFile(env, filename) {
   const branch = env.GITHUB_BRANCH || 'main';
-  const res = await fetch(`${contentsUrl(env)}?ref=${encodeURIComponent(branch)}`, {
+  const res = await fetch(`${contentsUrl(env, filename)}?ref=${encodeURIComponent(branch)}`, {
     headers: ghHeaders(env),
     cf: { cacheTtl: 0 }
   });
@@ -47,7 +47,7 @@ export async function readLinks(env) {
   return { map, sha: data.sha };
 }
 
-export async function writeLinks(env, map, sha, message) {
+async function writeJsonFile(env, filename, map, sha, message) {
   const branch = env.GITHUB_BRANCH || 'main';
   const body = {
     message,
@@ -55,16 +55,82 @@ export async function writeLinks(env, map, sha, message) {
     branch
   };
   if (sha) body.sha = sha;
-  const res = await fetch(contentsUrl(env), {
+  const res = await fetch(contentsUrl(env, filename), {
     method: 'PUT',
     headers: { ...ghHeaders(env), 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
+  if (res.status === 409) {
+    const err = new Error('conflict');
+    err.conflict = true;
+    throw err;
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.message || `GitHub write failed (${res.status})`);
   }
   return res.json();
+}
+
+export async function readLinks(env) {
+  return readJsonFile(env, 'links.json');
+}
+
+export async function writeLinks(env, map, sha, message) {
+  return writeJsonFile(env, 'links.json', map, sha, message);
+}
+
+// --- click counts, stored separately in counts.json so they never touch links.json ---
+
+export async function readCounts(env) {
+  return readJsonFile(env, 'counts.json');
+}
+
+export async function writeCounts(env, map, sha, message) {
+  return writeJsonFile(env, 'counts.json', map, sha, message);
+}
+
+// Increments one link's count, retrying a few times if another click is
+// writing at the same moment (GitHub rejects the write with a 409 if the
+// file changed since we read it — we just re-read and try again).
+export async function incrementCount(env, slug, attempts = 4) {
+  for (let i = 0; i < attempts; i++) {
+    const { map, sha } = await readCounts(env);
+    map[slug] = (map[slug] || 0) + 1;
+    try {
+      await writeCounts(env, map, sha, `+1 click: ${slug}`);
+      return map[slug];
+    } catch (e) {
+      if (!e.conflict || i === attempts - 1) throw e;
+      // small backoff before retrying with the latest sha
+      await new Promise((r) => setTimeout(r, 150 * (i + 1)));
+    }
+  }
+}
+
+async function deleteCount(env, slug) {
+  try {
+    const { map, sha } = await readCounts(env);
+    if (slug in map) {
+      delete map[slug];
+      await writeCounts(env, map, sha, `remove click count: ${slug}`);
+    }
+  } catch (e) {
+    // best-effort — a stray leftover counter is harmless
+  }
+}
+
+async function renameCount(env, oldSlug, newSlug) {
+  try {
+    const { map, sha } = await readCounts(env);
+    if (oldSlug in map) {
+      map[newSlug] = map[oldSlug];
+      delete map[oldSlug];
+      await writeCounts(env, map, sha, `move click count: ${oldSlug} -> ${newSlug}`);
+    }
+  } catch (e) {
+    // best-effort
+  }
 }
 
 // Supports multiple accounts via the ADMIN_USERS env var, a JSON object like
@@ -75,6 +141,7 @@ export async function deleteLink(env, slug) {
   if (!(slug in map)) throw new Error(`slug "${slug}" not found`);
   delete map[slug];
   await writeLinks(env, map, sha, `remove short link: ${slug}`);
+  await deleteCount(env, slug);
 }
 
 export function isAuthed(request, env) {
@@ -170,5 +237,6 @@ export async function updateLink(env, { slug, newSlug, dest, enabled, expiresAt,
   map[finalSlug] = updated;
 
   await writeLinks(env, map, sha, `update short link: ${slug}${finalSlug !== slug ? ' -> ' + finalSlug : ''}`);
+  if (finalSlug !== slug) await renameCount(env, slug, finalSlug);
   return finalSlug;
 }
