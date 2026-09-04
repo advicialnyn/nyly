@@ -21,9 +21,23 @@
     --amber: #FFB454;
     --amber-dim: #6B5636;
     --red: #FF6B6B;
+    --green: #3fae6a;
     --mono: ui-monospace, "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
     --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
+  html[data-theme="light"] {
+    --ink: #F4F5F7;
+    --panel: #FFFFFF;
+    --panel-2: #F0F1F4;
+    --line: #E1E4EA;
+    --text: #1B2233;
+    --muted: #6B7385;
+    --amber: #C97A18;
+    --amber-dim: #F1DCB8;
+    --red: #D14343;
+    --green: #1E874B;
+  }
+  html[data-theme="light"] .btn-primary { color: #FFFDF8; }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--ink); color: var(--text); font-family: var(--sans); font-size: 15px; }
   body { padding: 0 0 60px; }
@@ -64,6 +78,12 @@
   .badge.off { background: #331a1a; color: var(--red); }
   .badge.expired { background: #332a14; color: #e8b95f; }
   .link-dest { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  .click-pill {
+    font-family: var(--mono); font-size: 11px; color: var(--text); background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; flex-shrink: 0;
+    display: flex; align-items: center; gap: 4px; white-space: nowrap;
+  }
+  .click-pill .n { color: var(--amber); font-weight: 600; }
   .link-actions { display: flex; gap: 6px; flex-shrink: 0; }
   .empty { text-align: center; color: var(--muted); font-family: var(--mono); font-size: 13px; padding: 24px 0; }
   .locked { text-align: center; padding: 10px 0; }
@@ -104,10 +124,13 @@
 </head>
 <body>
 
-<header>
-  <div class="eyebrow">cloudflare pages</div>
-  <h1>linkstore<span class="cursor"></span></h1>
-  <p>a short link directory. add a slug, point it at a destination, share the short URL. no token to copy around — just a passphrase.</p>
+<header style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+  <div>
+    <div class="eyebrow">cloudflare pages</div>
+    <h1>linkstore<span class="cursor"></span></h1>
+    <p>a short link directory. add a slug, point it at a destination, share the short URL. no token to copy around — just a passphrase.</p>
+  </div>
+  <button class="btn-ghost" id="themeToggle" style="flex-shrink:0; margin-top:2px;" title="Toggle theme">🌙</button>
 </header>
 
 <div class="install-bar" id="installBar">
@@ -189,6 +212,22 @@
   var USER_KEY = 'ls_admin_user';
   var PW_KEY = 'ls_admin_pw';
   var currentLinks = {};
+  var currentCounts = {};
+
+  // --- theme toggle ---
+  var THEME_KEY = 'ls_theme';
+  var themeToggle = document.getElementById('themeToggle');
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    themeToggle.textContent = theme === 'light' ? '☀️' : '🌙';
+  }
+  var savedTheme = localStorage.getItem(THEME_KEY);
+  applyTheme(savedTheme || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+  themeToggle.addEventListener('click', function () {
+    var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    localStorage.setItem(THEME_KEY, next);
+    applyTheme(next);
+  });
 
   var els = {
     lockPanel: document.getElementById('lockPanel'),
@@ -257,8 +296,9 @@
     };
   }
 
-  function renderLinks(map) {
+  function renderLinks(map, counts) {
     currentLinks = map;
+    currentCounts = counts || {};
     var slugs = Object.keys(map).sort(function (a, b) {
       return normalize(map[b]).createdAt - normalize(map[a]).createdAt;
     });
@@ -291,6 +331,11 @@
       info.appendChild(s);
       info.appendChild(d);
 
+      var pill = document.createElement('div');
+      pill.className = 'click-pill';
+      var count = currentCounts[slug] || 0;
+      pill.innerHTML = '<span class="n">' + count + '</span> click' + (count === 1 ? '' : 's');
+
       var actions = document.createElement('div');
       actions.className = 'link-actions';
       var copyBtn = document.createElement('button');
@@ -306,6 +351,7 @@
       actions.appendChild(copyBtn);
 
       row.appendChild(info);
+      row.appendChild(pill);
       row.appendChild(actions);
       els.linksList.appendChild(row);
     });
@@ -314,7 +360,7 @@
   function loadLinks() {
     els.linksList.innerHTML = '<div class="empty">loading…</div>';
     api('/api/links').then(function (data) {
-      renderLinks(data.links || {});
+      renderLinks(data.links || {}, data.counts || {});
     }).catch(function (e) {
       if (/unauthorized/i.test(e.message)) { doLock(); return; }
       els.linksList.innerHTML = '<div class="empty">could not load links — ' + e.message + '</div>';
@@ -336,7 +382,7 @@
     api('/api/links').then(function (data) {
       setStatus(els.lockStatus, 'ok', 'unlocked');
       showApp(true);
-      renderLinks(data.links || {});
+      renderLinks(data.links || {}, data.counts || {});
     }).catch(function (e) {
       clearCreds();
       setStatus(els.lockStatus, 'err', /unauthorized/i.test(e.message) ? 'wrong username or password.' : e.message);
@@ -377,7 +423,9 @@
     var link = normalize(currentLinks[slug]);
     modalOriginalSlug = slug;
     els.modalSlug.textContent = '/' + slug;
-    els.modalMeta.textContent = link.createdAt ? ('created ' + new Date(link.createdAt).toLocaleString()) : 'created before this update — no timestamp recorded';
+    var count = currentCounts[slug] || 0;
+    var created = link.createdAt ? ('created ' + new Date(link.createdAt).toLocaleString()) : 'created before this update — no timestamp recorded';
+    els.modalMeta.textContent = created + ' · ' + count + ' click' + (count === 1 ? '' : 's');
     els.modalAlias.value = slug;
     els.modalDest.value = link.url;
     els.modalEnabled.checked = link.enabled;
@@ -451,7 +499,7 @@
   if (user() && pw()) {
     api('/api/links').then(function (data) {
       showApp(true);
-      renderLinks(data.links || {});
+      renderLinks(data.links || {}, data.counts || {});
     }).catch(function () {
       clearCreds();
       showApp(false);
