@@ -18,7 +18,7 @@ export async function onRequestGet(context) {
     try {
       counts = (await readCounts(env)).map;
     } catch (e) {
-      // counts.json may not exist yet — that's fine, just show 0s
+      // counts.json may not exist yet â€” that's fine, just show 0s
     }
 
     // "admin" sees everything; everyone else only sees their own links.
@@ -67,7 +67,7 @@ export async function onRequestPost(context) {
 }
 
 // Only "admin" or the link's own creator may edit/delete it. Links created
-// before this update have no owner recorded — only admin can touch those.
+// before this update have no owner recorded â€” only admin can touch those.
 async function assertOwnership(env, user, slug) {
   const { map } = await readLinks(env);
   if (!(slug in map)) throw new Error(`slug "${slug}" not found`);
