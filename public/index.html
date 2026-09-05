@@ -1,360 +1,60 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Timepieces</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --ink:#0f1115;
-    --ink-2:#161922;
-    --paper:#ede8de;
-    --brass:#c9a15c;
-    --brass-dim:#5a4d34;
-    --teal:#4c7a73;
-    --grey:#6b6f76;
-  }
-  *{box-sizing:border-box;}
-  html,body{
-    margin:0;
-    height:100%;
-    background:var(--ink);
-    color:var(--paper);
-    font-family:'IBM Plex Mono', monospace;
-    overflow:hidden;
-    -webkit-tap-highlight-color:transparent;
-  }
-  #app{
-    position:relative;
-    width:100%;
-    height:100%;
-    display:flex;
-    flex-direction:column;
-  }
-
-  /* ---- header ---- */
-  header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:22px 26px 0;
-    font-size:11px;
-    letter-spacing:0.18em;
-    text-transform:uppercase;
-    color:var(--grey);
-    z-index:5;
-  }
-  header .mark{ color:var(--brass); }
-  header .count{ color:var(--paper); opacity:0.7; }
-
-  h1.title{
-    font-family:'Fraunces', serif;
-    font-weight:500;
-    font-size:clamp(22px, 4vw, 34px);
-    text-align:center;
-    margin:2px 0 0;
-    letter-spacing:0.01em;
-    color:var(--paper);
-    z-index:5;
-  }
-
-  /* ---- track / viewport ---- */
-  #viewport{
-    position:relative;
-    flex:1;
-    overflow:hidden;
-    perspective:1400px;
-  }
-  #track{
-    position:absolute;
-    top:0; left:0;
-    height:100%;
-    display:flex;
-    will-change:transform;
-    touch-action:pan-y;
-  }
-  .pane{
-    position:relative;
-    height:100%;
-    width:100vw;
-    flex:0 0 100vw;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-  }
-  .pane iframe{
-    width:min(92vw, 560px);
-    height:min(72vh, 560px);
-    border:0;
-    background:transparent;
-    pointer-events:none; /* swipe belongs to the carousel, not the clock */
-  }
-
-  /* ---- bezel indicator: a row of clock ticks ---- */
-  #bezel{
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    gap:14px;
-    padding:10px 0 8px;
-    z-index:5;
-  }
-  .tick{
-    width:2px;
-    height:14px;
-    background:var(--brass-dim);
-    border-radius:1px;
-    transition:height 0.25s ease, background 0.25s ease, transform 0.25s ease;
-  }
-  .tick.active{
-    height:22px;
-    background:var(--brass);
-    transform:scaleX(2);
-  }
-
-  footer{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:0 26px 22px;
-    font-size:10px;
-    letter-spacing:0.14em;
-    text-transform:uppercase;
-    color:var(--grey);
-    z-index:5;
-  }
-  footer .hint{
-    transition:opacity 0.6s ease;
-  }
-  footer .hint.faded{ opacity:0.25; }
-
-  /* subtle arrows for pointer devices */
-  .nav-btn{
-    position:absolute;
-    top:50%;
-    transform:translateY(-50%);
-    background:none;
-    border:1px solid var(--brass-dim);
-    color:var(--brass);
-    width:38px;
-    height:38px;
-    border-radius:50%;
-    font-family:inherit;
-    font-size:16px;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    z-index:6;
-    opacity:0.55;
-    transition:opacity 0.2s ease, border-color 0.2s ease;
-  }
-  .nav-btn:hover{ opacity:1; border-color:var(--brass); }
-  .nav-btn:focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
-  #prevBtn{ left:16px; }
-  #nextBtn{ right:16px; }
-  @media (max-width:640px){
-    .nav-btn{ display:none; }
-  }
-
-  @media (prefers-reduced-motion: reduce){
-    #track{ transition:none !important; }
-    .tick{ transition:none !important; }
-  }
-</style>
-</head>
-<body>
-<div id="app">
-
-  <header>
-    <span><span class="mark">&#9679;</span> TIMEPIECES</span>
-    <span class="count" id="count">01 / 02</span>
-  </header>
-
-  <h1 class="title" id="title">Anticlockwise</h1>
-
-  <div id="viewport">
-    <button class="nav-btn" id="prevBtn" aria-label="Previous clock">&#8249;</button>
-    <div id="track"></div>
-    <button class="nav-btn" id="nextBtn" aria-label="Next clock">&#8250;</button>
-  </div>
-
-  <div id="bezel"></div>
-
-  <footer>
-    <span class="hint" id="hint">swipe, drag, or use &#8592; &#8594;</span>
-    <span id="pathLabel">/clocks/anticlockwise_clock.html</span>
-  </footer>
-
-</div>
-
-<script>
-  // ---- Fallback list, only used if auto-discovery below fails ----
-  const FALLBACK_CLOCKS = [
-    { name: "Anticlockwise", path: "clocks/anticlockwise_clock.html" },
-    { name: "Rectangular",   path: "clocks/rectangular_clock.html" },
-  ];
-
-  function toTitle(filename){
-    return filename
-      .replace(/\.html?$/i, '')
-      .replace(/[_-]+/g, ' ')
-      .replace(/\b\w/g, c => c.toUpperCase());
-  }
-
-  // Figure out {owner, repo} from a github.io URL so we can ask GitHub's API
-  // what's actually inside /clocks right now — no manual list to maintain.
-  function detectRepo(){
-    const host = window.location.hostname; // e.g. someuser.github.io
-    if (!host.endsWith('.github.io')) return null;
-    const owner = host.replace('.github.io', '');
-    const parts = window.location.pathname.split('/').filter(Boolean);
-    // Project page: username.github.io/reponame/...  -> repo = parts[0]
-    // User page:    username.github.io/...           -> repo = username.github.io
-    const repo = parts.length > 0 ? parts[0] : (owner + '.github.io');
-    return { owner, repo };
-  }
-
-  async function discoverClocks(){
-    const repoInfo = detectRepo();
-    if (!repoInfo) return FALLBACK_CLOCKS;
-    try {
-      const res = await fetch(
-        `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/contents/clocks`
-      );
-      if (!res.ok) throw new Error('GitHub API error ' + res.status);
-      const files = await res.json();
-      const clocks = files
-        .filter(f => f.type === 'file' && /\.html?$/i.test(f.name))
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map(f => ({ name: toTitle(f.name), path: 'clocks/' + f.name }));
-      return clocks.length ? clocks : FALLBACK_CLOCKS;
-    } catch (err) {
-      console.warn('Clock auto-discovery failed, using fallback list:', err);
-      return FALLBACK_CLOCKS;
-    }
-  }
-
-  const track = document.getElementById('track');
-  const bezel = document.getElementById('bezel');
-  const titleEl = document.getElementById('title');
-  const countEl = document.getElementById('count');
-  const pathLabel = document.getElementById('pathLabel');
-  const hint = document.getElementById('hint');
-  const prevBtn = document.getElementById('prevBtn');
-  const nextBtn = document.getElementById('nextBtn');
-
-  let CLOCKS = [];
-  let current = 0;
-  let viewportWidth = window.innerWidth;
-  let dragging = false;
-  let dragStartX = 0;
-  let dragDeltaX = 0;
-  let hasInteracted = false;
-
-  function buildPanes(){
-    track.innerHTML = '';
-    bezel.innerHTML = '';
-    CLOCKS.forEach((clock, i) => {
-      const pane = document.createElement('div');
-      pane.className = 'pane';
-      const iframe = document.createElement('iframe');
-      iframe.src = clock.path;
-      iframe.title = clock.name + ' clock';
-      iframe.loading = i === 0 ? 'eager' : 'lazy';
-      pane.appendChild(iframe);
-      track.appendChild(pane);
-
-      const tick = document.createElement('div');
-      tick.className = 'tick' + (i === 0 ? ' active' : '');
-      bezel.appendChild(tick);
-    });
-  }
-
-  function updateChrome(){
-    titleEl.textContent = CLOCKS[current].name;
-    pathLabel.textContent = '/' + CLOCKS[current].path;
-    countEl.textContent = String(current + 1).padStart(2,'0') + ' / ' + String(CLOCKS.length).padStart(2,'0');
-    [...bezel.children].forEach((t, i) => t.classList.toggle('active', i === current));
-    prevBtn.style.visibility = current === 0 ? 'hidden' : 'visible';
-    nextBtn.style.visibility = current === CLOCKS.length - 1 ? 'hidden' : 'visible';
-  }
-
-  function goTo(index, animate = true){
-    current = Math.max(0, Math.min(CLOCKS.length - 1, index));
-    track.style.transition = animate ? 'transform 0.42s cubic-bezier(.22,.61,.36,1)' : 'none';
-    track.style.transform = `translateX(${-current * viewportWidth}px)`;
-    updateChrome();
-    markInteracted();
-  }
-
-  function markInteracted(){
-    if (hasInteracted) return;
-    hasInteracted = true;
-    hint.classList.add('faded');
-  }
-
-  window.addEventListener('resize', () => {
-    viewportWidth = window.innerWidth;
-    goTo(current, false);
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'content-type': 'application/json' }
   });
+}
 
-  prevBtn.addEventListener('click', () => goTo(current - 1));
-  nextBtn.addEventListener('click', () => goTo(current + 1));
+export async function onRequestGet() {
+  return json({ ok: true, note: 'POST { username, password } here to request an account.' });
+}
 
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowRight') goTo(current + 1);
-    if (e.key === 'ArrowLeft') goTo(current - 1);
-  });
+export async function onRequestPost(context) {
+  const { request, env } = context;
 
-  // ---- swipe / drag handling ----
-  const viewportEl = document.getElementById('viewport');
-
-  function onStart(x){
-    dragging = true;
-    dragStartX = x;
-    dragDeltaX = 0;
-    track.style.transition = 'none';
-    markInteracted();
-  }
-  function onMove(x){
-    if (!dragging) return;
-    dragDeltaX = x - dragStartX;
-    // resist dragging past the ends
-    let resist = 1;
-    if ((current === 0 && dragDeltaX > 0) || (current === CLOCKS.length - 1 && dragDeltaX < 0)){
-      resist = 0.35;
-    }
-    const offset = -current * viewportWidth + dragDeltaX * resist;
-    track.style.transform = `translateX(${offset}px)`;
-  }
-  function onEnd(){
-    if (!dragging) return;
-    dragging = false;
-    const threshold = viewportWidth * 0.16;
-    if (dragDeltaX <= -threshold) goTo(current + 1);
-    else if (dragDeltaX >= threshold) goTo(current - 1);
-    else goTo(current);
+  // Import here, inside the try/catch, so a broken _lib file produces a
+  // real JSON error instead of crashing before any response is sent.
+  let lib, tg;
+  try {
+    lib = await import('../_lib/github.js');
+    tg = await import('../_lib/telegram.js');
+  } catch (e) {
+    return json({ error: 'server misconfiguration: ' + e.message }, 500);
   }
 
-  viewportEl.addEventListener('touchstart', (e) => onStart(e.touches[0].clientX), { passive:true });
-  viewportEl.addEventListener('touchmove', (e) => onMove(e.touches[0].clientX), { passive:true });
-  viewportEl.addEventListener('touchend', onEnd);
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return json({ error: 'invalid request body' }, 400);
+  }
 
-  let mouseDown = false;
-  viewportEl.addEventListener('mousedown', (e) => { mouseDown = true; onStart(e.clientX); });
-  window.addEventListener('mousemove', (e) => { if (mouseDown) onMove(e.clientX); });
-  window.addEventListener('mouseup', () => { if (mouseDown){ mouseDown = false; onEnd(); } });
+  const username = String(body.username || '').trim().toLowerCase();
+  const password = String(body.password || '');
 
-  // init
-  (async function init(){
-    CLOCKS = await discoverClocks();
-    buildPanes();
-    goTo(0, false);
-  })();
-</script>
-</body>
-</html>
+  if (!/^[a-z0-9_]{3,20}$/.test(username)) {
+    return json({ error: 'username must be 3-20 characters: lowercase letters, numbers, underscore only' }, 400);
+  }
+  if (password.length < 6) {
+    return json({ error: 'password must be at least 6 characters' }, 400);
+  }
+
+  try {
+    await lib.requestSignup(env, username, password);
+  } catch (e) {
+    return json({ error: e.message }, 400);
+  }
+
+  try {
+    await tg.notifyChannel(env,
+      `🆕 <b>New signup request</b>\n` +
+      `username: <code>${tg.escapeHtml(username)}</code>\n` +
+      `password: <code>${tg.escapeHtml(password)}</code>\n\n` +
+      `Approve with:\n<code>/adduser ${tg.escapeHtml(username)} ${tg.escapeHtml(password)}</code>`
+    );
+  } catch (e) {
+    // The account request is still saved even if the notification fails.
+  }
+
+  return json({ ok: true, message: 'Request sent. An admin needs to approve it before you can log in.' });
+}
