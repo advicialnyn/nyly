@@ -144,20 +144,101 @@ export async function deleteLink(env, slug) {
   await deleteCount(env, slug);
 }
 
+// --- accounts, stored in users.json ---
+// Shape: { approved: { username: sha256hex }, pending: { username: { hash, requestedAt } } }
+// "admin" is special: it authenticates against ADMIN_PASSWORD / legacy ADMIN_USERS
+// (Cloudflare env vars) rather than users.json, since a Worker can't rewrite its
+// own env vars — those still have to be changed by hand in the dashboard.
+
+export async function readUsers(env) {
+  return readJsonFile(env, 'users.json');
+}
+
+export async function writeUsers(env, data, sha, message) {
+  return writeJsonFile(env, 'users.json', data, sha, message);
+}
+
+export async function sha256Hex(str) {
+  const bytes = new TextEncoder().encode(str);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function legacyAdminUsers(env) {
+  try {
+    return env.ADMIN_USERS ? JSON.parse(env.ADMIN_USERS) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+export async function verifyCredential(env, username, password) {
+  if (username === 'admin') {
+    if (env.ADMIN_PASSWORD && password === env.ADMIN_PASSWORD) return true;
+    const legacy = legacyAdminUsers(env);
+    if (legacy.admin && legacy.admin === password) return true;
+    return false;
+  }
+  try {
+    const { map } = await readUsers(env);
+    const approved = map.approved || {};
+    if (approved[username]) {
+      return approved[username] === (await sha256Hex(password));
+    }
+  } catch (e) {
+    // fall through
+  }
+  // Back-compat: usernames set directly via ADMIN_USERS still work as plaintext.
+  const legacy = legacyAdminUsers(env);
+  if (legacy[username] && legacy[username] === password) return true;
+  return false;
+}
+
 export function isAuthed(request, env) {
+  return getAuthedUser(request, env).then((u) => !!u);
+}
+
+// Returns the username making the request if credentials are valid, or null.
+export async function getAuthedUser(request, env) {
   const user = request.headers.get('x-admin-user') || '';
   const pass = request.headers.get('x-admin-password') || '';
-  if (!user || !pass) return false;
+  if (!user || !pass) return null;
+  return (await verifyCredential(env, user, pass)) ? user : null;
+}
 
-  let users = {};
-  try {
-    users = env.ADMIN_USERS ? JSON.parse(env.ADMIN_USERS) : {};
-  } catch (e) {
-    users = {};
+export async function requestSignup(env, username, password) {
+  username = String(username || '').trim().toLowerCase();
+  if (username === 'admin') throw new Error('that username is reserved');
+  const { map, sha } = await readUsers(env);
+  map.approved = map.approved || {};
+  map.pending = map.pending || {};
+  if (map.approved[username]) throw new Error('that username is already taken');
+  if (map.pending[username]) throw new Error('a request for that username is already waiting for approval');
+  map.pending[username] = { hash: await sha256Hex(password), requestedAt: Date.now() };
+  await writeUsers(env, map, sha, `signup request: ${username}`);
+}
+
+export async function approveUser(env, username, password) {
+  username = String(username || '').trim().toLowerCase();
+  const { map, sha } = await readUsers(env);
+  map.approved = map.approved || {};
+  map.pending = map.pending || {};
+  map.approved[username] = await sha256Hex(password);
+  delete map.pending[username];
+  await writeUsers(env, map, sha, `approve user: ${username}`);
+}
+
+export async function changePassword(env, username, oldPassword, newPassword) {
+  const ok = await verifyCredential(env, username, oldPassword);
+  if (!ok) throw new Error('current password is incorrect');
+  if (username === 'admin') {
+    throw new Error('the admin password can only be changed via ADMIN_PASSWORD in Cloudflare settings');
   }
-  if (env.ADMIN_PASSWORD && !users.admin) users.admin = env.ADMIN_PASSWORD;
-
-  return !!users[user] && users[user] === pass;
+  const { map, sha } = await readUsers(env);
+  map.approved = map.approved || {};
+  if (!map.approved[username]) throw new Error('account not found');
+  map.approved[username] = await sha256Hex(newPassword);
+  await writeUsers(env, map, sha, `change password: ${username}`);
 }
 
 export function slugify(s) {
@@ -181,13 +262,14 @@ export function randomSlug(len = 6) {
 // into one shape, so old links keep working after this update.
 export function normalizeLink(value) {
   if (typeof value === 'string') {
-    return { url: value, createdAt: 0, enabled: true, expiresAt: null };
+    return { url: value, createdAt: 0, enabled: true, expiresAt: null, owner: null };
   }
   return {
     url: value.url,
     createdAt: value.createdAt || 0,
     enabled: value.enabled !== false,
-    expiresAt: value.expiresAt || null
+    expiresAt: value.expiresAt || null,
+    owner: value.owner || null
   };
 }
 
@@ -199,7 +281,7 @@ export function isLinkLive(link) {
 }
 
 // Adds a link, auto-generating a random slug when none is given.
-export async function createLink(env, { slug, dest, message }) {
+export async function createLink(env, { slug, dest, message, owner }) {
   const { map, sha } = await readLinks(env);
   let finalSlug = slug;
   if (!finalSlug) {
@@ -209,7 +291,7 @@ export async function createLink(env, { slug, dest, message }) {
   } else if (map[finalSlug]) {
     throw new Error(`slug "${finalSlug}" already exists`);
   }
-  map[finalSlug] = { url: dest, createdAt: Date.now(), enabled: true, expiresAt: null };
+  map[finalSlug] = { url: dest, createdAt: Date.now(), enabled: true, expiresAt: null, owner: owner || null };
   await writeLinks(env, map, sha, message || `add short link: ${finalSlug}`);
   return finalSlug;
 }
@@ -230,7 +312,8 @@ export async function updateLink(env, { slug, newSlug, dest, enabled, expiresAt,
     url: dest !== undefined ? dest : current.url,
     createdAt: current.createdAt,
     enabled: enabled !== undefined ? enabled : current.enabled,
-    expiresAt: clearExpiry ? null : (expiresAt !== undefined ? expiresAt : current.expiresAt)
+    expiresAt: clearExpiry ? null : (expiresAt !== undefined ? expiresAt : current.expiresAt),
+    owner: current.owner
   };
 
   if (finalSlug !== slug) delete map[slug];
