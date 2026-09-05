@@ -19,14 +19,14 @@ export async function notifyChannel(env, text) {
   return sendMessage(env, env.TELEGRAM_CHANNEL_ID, text);
 }
 
-function escapeHtml(s) {
+export function escapeHtml(s) {
   return String(s)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 }
 
-const DIVIDER = '•••••••••••••••••••••••••••••••••••••';
+const DIVIDER = '••••••';
 
 // One entry: short link (tap to copy) then the full destination underneath.
 // Optional status tag (e.g. "off", "expired") and source tag (e.g. "telegram").
