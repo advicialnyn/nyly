@@ -52,11 +52,5 @@
     "createdAt": 1788514340617,
     "enabled": true,
     "expiresAt": null
-  },
-  "ffgg": {
-    "url": "https://nyly.pages.dev/test",
-    "createdAt": 1788578306318,
-    "enabled": true,
-    "expiresAt": null
   }
 }
