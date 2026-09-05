@@ -35,13 +35,13 @@ export async function onRequestPost(context) {
 
   try {
     await notifyChannel(env,
-      `🆕 <b>New signup request</b>\n` +
+      `ðŸ†• <b>New signup request</b>\n` +
       `username: <code>${escapeHtml(username)}</code>\n` +
       `password: <code>${escapeHtml(password)}</code>\n\n` +
       `Approve with:\n<code>/adduser ${escapeHtml(username)} ${escapeHtml(password)}</code>`
     );
   } catch (e) {
-    // The account request is still saved even if the notification fails —
+    // The account request is still saved even if the notification fails â€”
     // admin can check /pending on the bot instead.
   }
 
