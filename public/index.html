@@ -2,831 +2,359 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>linkstore</title>
-<link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#0F1420">
-<link rel="apple-touch-icon" href="/icons/icon-192.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="linkstore">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Timepieces</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --ink: #0F1420;
-    --panel: #161C2C;
-    --panel-2: #1D2437;
-    --line: #262F45;
-    --text: #E8ECF1;
-    --muted: #8B93A7;
-    --amber: #FFB454;
-    --amber-dim: #6B5636;
-    --red: #FF6B6B;
-    --green: #3fae6a;
-    --mono: ui-monospace, "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
-    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  :root{
+    --ink:#0f1115;
+    --ink-2:#161922;
+    --paper:#ede8de;
+    --brass:#c9a15c;
+    --brass-dim:#5a4d34;
+    --teal:#4c7a73;
+    --grey:#6b6f76;
   }
-  html[data-theme="light"] {
-    --ink: #F4F5F7;
-    --panel: #FFFFFF;
-    --panel-2: #F0F1F4;
-    --line: #E1E4EA;
-    --text: #1B2233;
-    --muted: #6B7385;
-    --amber: #C97A18;
-    --amber-dim: #F1DCB8;
-    --red: #D14343;
-    --green: #1E874B;
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;
+    height:100%;
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'IBM Plex Mono', monospace;
+    overflow:hidden;
+    -webkit-tap-highlight-color:transparent;
   }
-  html[data-theme="light"] .btn-primary { color: #FFFDF8; }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--ink); color: var(--text); font-family: var(--sans); font-size: 15px; }
-  body { padding: 0 0 60px; }
-  header { padding: 32px 20px 20px; max-width: 720px; margin: 0 auto; }
-  .eyebrow { font-family: var(--mono); font-size: 12px; color: var(--amber); letter-spacing: 0.12em; text-transform: uppercase; }
-  .eyebrow::before { content: "\2192  "; }
-  h1 { font-family: var(--mono); font-size: 28px; font-weight: 600; margin: 8px 0 4px; letter-spacing: -0.01em; }
-  h1 .cursor { display: inline-block; width: 10px; height: 22px; background: var(--amber); margin-left: 4px; vertical-align: -3px; animation: blink 1.1s steps(1) infinite; }
-  @keyframes blink { 50% { opacity: 0; } }
-  header p { color: var(--muted); margin: 0; font-size: 14px; line-height: 1.5; }
-  main { max-width: 720px; margin: 0 auto; padding: 0 20px; display: flex; flex-direction: column; gap: 18px; }
-  section.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
-  section.panel > h2 { font-family: var(--mono); font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 14px; display: flex; align-items: center; justify-content: space-between; }
-  label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 6px; font-family: var(--mono); }
-  label:first-of-type { margin-top: 0; }
-  input[type=text], input[type=url], input[type=password] {
-    width: 100%; background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
-    padding: 11px 12px; border-radius: 7px; font-size: 15px; font-family: var(--mono);
+  #app{
+    position:relative;
+    width:100%;
+    height:100%;
+    display:flex;
+    flex-direction:column;
   }
-  input:focus { outline: none; border-color: var(--amber); }
-  button { font-family: var(--mono); font-size: 14px; font-weight: 600; border: none; border-radius: 7px; padding: 11px 16px; cursor: pointer; }
-  button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
-  .btn-primary { background: var(--amber); color: #241a08; width: 100%; margin-top: 14px; }
-  .btn-primary:disabled { background: var(--amber-dim); color: #9c8355; cursor: not-allowed; }
-  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); font-size: 12px; padding: 6px 10px; }
-  .btn-danger { background: transparent; color: var(--red); border: 1px solid #3a2530; font-size: 12px; padding: 6px 10px; }
-  .hint { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
-  .status { font-family: var(--mono); font-size: 13px; padding: 10px 12px; border-radius: 7px; margin-top: 12px; display: none; }
-  .status.ok { display: block; background: #17301f; color: #7de6a0; }
-  .status.err { display: block; background: #331a1a; color: var(--red); }
-  .status.pending { display: block; background: var(--panel-2); color: var(--muted); }
-  .link-card { border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; background: var(--panel-2); }
-  .link-card:last-child { margin-bottom: 0; }
-  .card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-  .card-date { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-  .switch.mini { width: 38px; height: 22px; }
-  .switch.mini .slider::before { width: 14px; height: 14px; }
-  .switch.mini input:checked + .slider::before { transform: translateX(16px); }
-  .card-dest-row { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
-  .card-dest-row .icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
-  .card-dest-row .link-dest { font-size: 12px; color: var(--muted); word-break: break-all; }
-  .card-divider { height: 1px; background: var(--line); margin: 0 0 10px; }
-  .short-url-row { margin-bottom: 12px; }
-  .short-url-row .link-slug { font-family: var(--mono); font-size: 14px; color: var(--amber); word-break: break-all; cursor: pointer; }
-  .short-url-row .link-slug .badge { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; border-radius: 4px; padding: 1px 6px; margin-left: 6px; vertical-align: 1px; }
-  .badge.off { background: #331a1a; color: var(--red); }
-  .badge.expired { background: #332a14; color: #e8b95f; }
-  .icon-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-  .icon-btn {
-    width: 38px; height: 38px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line);
-    display: flex; align-items: center; justify-content: center; font-size: 15px; cursor: pointer; color: var(--text);
-    padding: 0;
+
+  /* ---- header ---- */
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:22px 26px 0;
+    font-size:11px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--grey);
+    z-index:5;
   }
-  .icon-btn:hover { border-color: var(--amber-dim); }
-  .icon-btn.danger { color: var(--red); }
-  .card-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  .expiry-note { font-size: 11px; color: var(--muted); text-align: right; }
-  .expiry-note.past { color: var(--red); }
-  .click-pill {
-    font-family: var(--mono); font-size: 11px; color: var(--text); background: var(--panel);
-    border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; flex-shrink: 0;
-    display: flex; align-items: center; gap: 4px; white-space: nowrap;
+  header .mark{ color:var(--brass); }
+  header .count{ color:var(--paper); opacity:0.7; }
+
+  h1.title{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    font-size:clamp(22px, 4vw, 34px);
+    text-align:center;
+    margin:2px 0 0;
+    letter-spacing:0.01em;
+    color:var(--paper);
+    z-index:5;
   }
-  .click-pill .n { color: var(--amber); font-weight: 600; }
-  .qr-backdrop {
-    display: none; position: fixed; inset: 0; background: rgba(6,9,15,0.7);
-    align-items: center; justify-content: center; z-index: 60; padding: 24px;
+
+  /* ---- track / viewport ---- */
+  #viewport{
+    position:relative;
+    flex:1;
+    overflow:hidden;
+    perspective:1400px;
   }
-  .qr-backdrop.show { display: flex; }
-  .qr-box { background: #fff; border-radius: 14px; padding: 20px; text-align: center; max-width: 280px; }
-  .qr-box img { width: 220px; height: 220px; display: block; }
-  .qr-box .short-url-label { font-family: var(--mono); font-size: 12px; color: #333; margin-top: 10px; word-break: break-all; }
-  .qr-box button { margin-top: 14px; width: 100%; }
-  .empty { text-align: center; color: var(--muted); font-family: var(--mono); font-size: 13px; padding: 24px 0; }
-  .locked { text-align: center; padding: 10px 0; }
-  .locked p { color: var(--muted); font-size: 13px; margin: 10px 0 0; }
-  .modal-backdrop {
-    display: none; position: fixed; inset: 0; background: rgba(6,9,15,0.7);
-    align-items: flex-end; justify-content: center; z-index: 50;
+  #track{
+    position:absolute;
+    top:0; left:0;
+    height:100%;
+    display:flex;
+    will-change:transform;
+    touch-action:pan-y;
   }
-  .modal-backdrop.show { display: flex; }
-  .modal {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 14px 14px 0 0;
-    width: 100%; max-width: 720px; padding: 20px; max-height: 88vh; overflow-y: auto;
+  .pane{
+    position:relative;
+    height:100%;
+    width:100vw;
+    flex:0 0 100vw;
+    display:flex;
+    align-items:center;
+    justify-content:center;
   }
-  .modal h3 { font-family: var(--mono); font-size: 16px; margin: 0 0 4px; color: var(--amber); word-break: break-all; }
-  .modal .meta { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
-  .toggle-row { display: flex; align-items: center; justify-content: space-between; margin: 14px 0; }
-  .toggle-row label { margin: 0; }
-  .switch { position: relative; width: 44px; height: 26px; flex-shrink: 0; }
-  .switch input { opacity: 0; width: 0; height: 0; }
-  .switch .slider { position: absolute; inset: 0; background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; transition: 0.15s; cursor: pointer; }
-  .switch .slider::before { content: ""; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: var(--muted); border-radius: 50%; transition: 0.15s; }
-  .switch input:checked + .slider { background: var(--amber-dim); border-color: var(--amber); }
-  .switch input:checked + .slider::before { transform: translateX(18px); background: var(--amber); }
-  .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
-  .modal-actions .btn-primary { margin-top: 0; }
-  .btn-secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); flex: 1; }
-  .install-bar {
-    display: none; align-items: center; justify-content: space-between; gap: 12px;
-    background: var(--panel); border: 1px solid var(--amber-dim); border-radius: 10px;
-    padding: 12px 14px; margin: 0 20px 18px; max-width: 720px; margin-left: auto; margin-right: auto;
-    font-size: 13px;
+  .pane iframe{
+    width:min(92vw, 560px);
+    height:min(72vh, 560px);
+    border:0;
+    background:transparent;
+    pointer-events:none; /* swipe belongs to the carousel, not the clock */
   }
-  .install-bar.show { display: flex; }
-  .install-bar span { color: var(--text); }
-  .install-bar button { background: var(--amber); color: #241a08; padding: 8px 14px; font-size: 13px; }
-  .install-bar .dismiss { background: transparent; color: var(--muted); border: 1px solid var(--line); padding: 8px 10px; }
-  details summary { cursor: pointer; font-family: var(--mono); font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); list-style: none; }
-  details summary::-webkit-details-marker { display: none; }
-  details summary::before { content: "▸ "; color: var(--amber); }
-  details[open] summary::before { content: "▾ "; }
-  details .panel-inner { padding-top: 14px; }
+
+  /* ---- bezel indicator: a row of clock ticks ---- */
+  #bezel{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:14px;
+    padding:10px 0 8px;
+    z-index:5;
+  }
+  .tick{
+    width:2px;
+    height:14px;
+    background:var(--brass-dim);
+    border-radius:1px;
+    transition:height 0.25s ease, background 0.25s ease, transform 0.25s ease;
+  }
+  .tick.active{
+    height:22px;
+    background:var(--brass);
+    transform:scaleX(2);
+  }
+
+  footer{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:0 26px 22px;
+    font-size:10px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--grey);
+    z-index:5;
+  }
+  footer .hint{
+    transition:opacity 0.6s ease;
+  }
+  footer .hint.faded{ opacity:0.25; }
+
+  /* subtle arrows for pointer devices */
+  .nav-btn{
+    position:absolute;
+    top:50%;
+    transform:translateY(-50%);
+    background:none;
+    border:1px solid var(--brass-dim);
+    color:var(--brass);
+    width:38px;
+    height:38px;
+    border-radius:50%;
+    font-family:inherit;
+    font-size:16px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:6;
+    opacity:0.55;
+    transition:opacity 0.2s ease, border-color 0.2s ease;
+  }
+  .nav-btn:hover{ opacity:1; border-color:var(--brass); }
+  .nav-btn:focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
+  #prevBtn{ left:16px; }
+  #nextBtn{ right:16px; }
+  @media (max-width:640px){
+    .nav-btn{ display:none; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    #track{ transition:none !important; }
+    .tick{ transition:none !important; }
+  }
 </style>
 </head>
 <body>
+<div id="app">
 
-<header style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
-  <div>
-    <div class="eyebrow">cloudflare pages</div>
-    <h1>linkstore<span class="cursor"></span></h1>
-    <p>a short link directory. add a slug, point it at a destination, share the short URL. no token to copy around — just a passphrase.</p>
-  </div>
-  <button class="btn-ghost" id="themeToggle" style="flex-shrink:0; margin-top:2px;" title="Toggle theme">🌙</button>
-</header>
+  <header>
+    <span><span class="mark">&#9679;</span> TIMEPIECES</span>
+    <span class="count" id="count">01 / 02</span>
+  </header>
 
-<div class="install-bar" id="installBar">
-  <span id="installText">Install this as an app for quicker access.</span>
-  <div style="display:flex; gap:8px; flex-shrink:0;">
-    <button id="installBtn">Install</button>
-    <button class="dismiss" id="installDismiss">Not now</button>
-  </div>
-</div>
+  <h1 class="title" id="title">Anticlockwise</h1>
 
-<main>
-
-  <section class="panel" id="lockPanel">
-    <h2>Unlock</h2>
-    <label for="user">Username</label>
-    <input type="text" id="user" placeholder="admin" autocomplete="username" autocapitalize="off">
-    <label for="pw">Password</label>
-    <input type="password" id="pw" placeholder="••••••••" autocomplete="current-password">
-    <button class="btn-primary" id="unlockBtn">Unlock</button>
-    <div class="status" id="lockStatus"></div>
-    <div style="text-align:center; margin-top:14px;">
-      <button class="btn-ghost" id="showSignup" style="font-size:12px;">New here? Request an account</button>
-    </div>
-
-    <div id="signupForm" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--line);">
-      <label for="signupUser">Choose a username</label>
-      <input type="text" id="signupUser" placeholder="e.g. nyn" autocomplete="off" autocapitalize="off">
-      <label for="signupPw">Choose a password</label>
-      <input type="password" id="signupPw" placeholder="at least 6 characters" autocomplete="new-password">
-      <button class="btn-primary" id="signupBtn">Request account</button>
-      <div class="status" id="signupStatus"></div>
-      <div class="hint">Your request goes to the admin for approval — you'll be able to log in once it's approved.</div>
-    </div>
-  </section>
-
-  <div id="appPanels" style="display:none; flex-direction:column; gap:18px;">
-    <section class="panel">
-      <details>
-        <summary>Account settings</summary>
-        <div class="panel-inner">
-          <label for="oldPw">Current password</label>
-          <input type="password" id="oldPw" autocomplete="current-password">
-          <label for="newPw">New password</label>
-          <input type="password" id="newPw" placeholder="at least 6 characters" autocomplete="new-password">
-          <button class="btn-primary" id="changePwBtn">Change password</button>
-          <div class="status" id="changePwStatus"></div>
-          <div class="hint" id="adminPwHint" style="display:none;">The <code>admin</code> account's password can only be changed via the <code>ADMIN_PASSWORD</code> environment variable in Cloudflare — not here.</div>
-        </div>
-      </details>
-    </section>
-
-    <section class="panel">
-      <h2>New link</h2>
-      <label for="newSlug">Slug <span style="color:var(--muted); text-transform:none;">(optional — random if left blank)</span></label>
-      <input type="text" id="newSlug" placeholder="leave blank for a random slug" autocomplete="off" autocapitalize="off">
-      <label for="newDest">Destination URL</label>
-      <input type="url" id="newDest" placeholder="https://example.com/very/long/path" autocomplete="off">
-      <button class="btn-primary" id="createBtn">Create short link</button>
-      <div class="status" id="createStatus"></div>
-    </section>
-
-    <section class="panel">
-      <h2 id="linksHeading">Links</h2>
-      <div id="linksList"><div class="empty">loading…</div></div>
-    </section>
+  <div id="viewport">
+    <button class="nav-btn" id="prevBtn" aria-label="Previous clock">&#8249;</button>
+    <div id="track"></div>
+    <button class="nav-btn" id="nextBtn" aria-label="Next clock">&#8250;</button>
   </div>
 
-</main>
+  <div id="bezel"></div>
 
-<div class="modal-backdrop" id="modalBackdrop">
-  <div class="modal">
-    <h3 id="modalSlug">/slug</h3>
-    <div class="meta" id="modalMeta"></div>
+  <footer>
+    <span class="hint" id="hint">swipe, drag, or use &#8592; &#8594;</span>
+    <span id="pathLabel">/clocks/anticlockwise_clock.html</span>
+  </footer>
 
-    <label for="modalAlias">Alias (slug)</label>
-    <input type="text" id="modalAlias" autocomplete="off" autocapitalize="off">
-
-    <label for="modalDest">Destination URL</label>
-    <input type="url" id="modalDest" autocomplete="off">
-
-    <div class="toggle-row">
-      <label style="margin:0;">Enabled</label>
-      <label class="switch">
-        <input type="checkbox" id="modalEnabled">
-        <span class="slider"></span>
-      </label>
-    </div>
-
-    <label for="modalExpiry">Expires <span style="color:var(--muted); text-transform:none;">(optional)</span></label>
-    <input type="datetime-local" id="modalExpiry">
-
-    <div class="modal-actions">
-      <button class="btn-secondary" id="modalCancel">Cancel</button>
-      <button class="btn-primary" id="modalSave" style="margin-top:0; flex:1;">Save</button>
-    </div>
-    <div class="modal-actions">
-      <button class="btn-ghost" id="modalCopy" style="flex:1; text-align:center;">Copy link</button>
-      <button class="btn-danger" id="modalDelete" style="flex:1; text-align:center;">Delete</button>
-    </div>
-    <div class="status" id="modalStatus"></div>
-  </div>
-</div>
-
-<div class="qr-backdrop" id="qrBackdrop">
-  <div class="qr-box">
-    <img id="qrImg" alt="QR code" src="">
-    <div class="short-url-label" id="qrLabel"></div>
-    <button class="btn-secondary" id="qrClose">Close</button>
-  </div>
 </div>
 
 <script>
-(function () {
-  var USER_KEY = 'ls_admin_user';
-  var PW_KEY = 'ls_admin_pw';
-  var currentLinks = {};
-  var currentCounts = {};
+  // ---- Fallback list, only used if auto-discovery below fails ----
+  const FALLBACK_CLOCKS = [
+    { name: "Anticlockwise", path: "clocks/anticlockwise_clock.html" },
+    { name: "Rectangular",   path: "clocks/rectangular_clock.html" },
+  ];
 
-  // --- theme toggle ---
-  var THEME_KEY = 'ls_theme';
-  var themeToggle = document.getElementById('themeToggle');
-  function applyTheme(theme) {
-    document.documentElement.setAttribute('data-theme', theme);
-    themeToggle.textContent = theme === 'light' ? '☀️' : '🌙';
-  }
-  var savedTheme = localStorage.getItem(THEME_KEY);
-  applyTheme(savedTheme || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
-  themeToggle.addEventListener('click', function () {
-    var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-    localStorage.setItem(THEME_KEY, next);
-    applyTheme(next);
-  });
-
-  var els = {
-    lockPanel: document.getElementById('lockPanel'),
-    appPanels: document.getElementById('appPanels'),
-    user: document.getElementById('user'),
-    pw: document.getElementById('pw'),
-    unlockBtn: document.getElementById('unlockBtn'),
-    lockStatus: document.getElementById('lockStatus'),
-    newSlug: document.getElementById('newSlug'),
-    newDest: document.getElementById('newDest'),
-    createBtn: document.getElementById('createBtn'),
-    createStatus: document.getElementById('createStatus'),
-    linksList: document.getElementById('linksList'),
-    linksHeading: document.getElementById('linksHeading'),
-    modalBackdrop: document.getElementById('modalBackdrop'),
-    modalSlug: document.getElementById('modalSlug'),
-    modalMeta: document.getElementById('modalMeta'),
-    modalAlias: document.getElementById('modalAlias'),
-    modalDest: document.getElementById('modalDest'),
-    modalEnabled: document.getElementById('modalEnabled'),
-    modalExpiry: document.getElementById('modalExpiry'),
-    modalCancel: document.getElementById('modalCancel'),
-    modalSave: document.getElementById('modalSave'),
-    modalCopy: document.getElementById('modalCopy'),
-    modalDelete: document.getElementById('modalDelete'),
-    modalStatus: document.getElementById('modalStatus'),
-    qrBackdrop: document.getElementById('qrBackdrop'),
-    qrImg: document.getElementById('qrImg'),
-    qrLabel: document.getElementById('qrLabel'),
-    qrClose: document.getElementById('qrClose'),
-    showSignup: document.getElementById('showSignup'),
-    signupForm: document.getElementById('signupForm'),
-    signupUser: document.getElementById('signupUser'),
-    signupPw: document.getElementById('signupPw'),
-    signupBtn: document.getElementById('signupBtn'),
-    signupStatus: document.getElementById('signupStatus'),
-    oldPw: document.getElementById('oldPw'),
-    newPw: document.getElementById('newPw'),
-    changePwBtn: document.getElementById('changePwBtn'),
-    changePwStatus: document.getElementById('changePwStatus'),
-    adminPwHint: document.getElementById('adminPwHint')
-  };
-
-  function user() { return sessionStorage.getItem(USER_KEY) || ''; }
-  function pw() { return sessionStorage.getItem(PW_KEY) || ''; }
-  function setCreds(u, p) { sessionStorage.setItem(USER_KEY, u); sessionStorage.setItem(PW_KEY, p); }
-  function clearCreds() { sessionStorage.removeItem(USER_KEY); sessionStorage.removeItem(PW_KEY); }
-
-  function setStatus(el, kind, text) {
-    el.className = 'status ' + kind;
-    el.textContent = text;
+  function toTitle(filename){
+    return filename
+      .replace(/\.html?$/i, '')
+      .replace(/[_-]+/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
   }
 
-  function showApp(show) {
-    els.lockPanel.style.display = show ? 'none' : 'block';
-    els.appPanels.style.display = show ? 'flex' : 'none';
+  // Figure out {owner, repo} from a github.io URL so we can ask GitHub's API
+  // what's actually inside /clocks right now — no manual list to maintain.
+  function detectRepo(){
+    const host = window.location.hostname; // e.g. someuser.github.io
+    if (!host.endsWith('.github.io')) return null;
+    const owner = host.replace('.github.io', '');
+    const parts = window.location.pathname.split('/').filter(Boolean);
+    // Project page: username.github.io/reponame/...  -> repo = parts[0]
+    // User page:    username.github.io/...           -> repo = username.github.io
+    const repo = parts.length > 0 ? parts[0] : (owner + '.github.io');
+    return { owner, repo };
   }
 
-  function api(path, opts) {
-    opts = opts || {};
-    opts.headers = Object.assign({ 'x-admin-user': user(), 'x-admin-password': pw() }, opts.headers || {});
-    return fetch(path, opts).then(function (r) {
-      return r.json().then(function (data) {
-        if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
-        return data;
-      });
-    });
-  }
-
-  function shortUrlFor(slug) {
-    return location.origin + '/' + slug;
-  }
-
-  function pad2(n) { return n < 10 ? '0' + n : '' + n; }
-  function toLocalDatetimeValue(ms) {
-    var d = new Date(ms);
-    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + 'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
-  }
-  function formatExpiry(ms) {
-    var d = new Date(ms);
-    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) + ', ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-  }
-
-  function normalize(value) {
-    if (typeof value === 'string') return { url: value, createdAt: 0, enabled: true, expiresAt: null };
-    return {
-      url: value.url,
-      createdAt: value.createdAt || 0,
-      enabled: value.enabled !== false,
-      expiresAt: value.expiresAt || null
-    };
-  }
-
-  function renderLinks(map, counts) {
-    currentLinks = map;
-    currentCounts = counts || {};
-    var slugs = Object.keys(map).sort(function (a, b) {
-      return normalize(map[b]).createdAt - normalize(map[a]).createdAt;
-    });
-    els.linksHeading.innerHTML = 'Links (' + slugs.length + ') <button class="btn-ghost" id="lockBtnInline">Lock</button>';
-    document.getElementById('lockBtnInline').addEventListener('click', doLock);
-    if (!slugs.length) {
-      els.linksList.innerHTML = '<div class="empty">no links yet — create one above</div>';
-      return;
-    }
-    els.linksList.innerHTML = '';
-    slugs.forEach(function (slug) {
-      var link = normalize(map[slug]);
-      var shortUrl = shortUrlFor(slug);
-      var card = document.createElement('div');
-      card.className = 'link-card';
-
-      // top row: enable toggle + created date
-      var top = document.createElement('div');
-      top.className = 'card-top';
-      var toggleLabel = document.createElement('label');
-      toggleLabel.className = 'switch mini';
-      var toggleInput = document.createElement('input');
-      toggleInput.type = 'checkbox';
-      toggleInput.checked = link.enabled;
-      toggleInput.addEventListener('change', function () {
-        var newVal = toggleInput.checked;
-        toggleInput.disabled = true;
-        api('/api/links', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: slug, enabled: newVal }) })
-          .then(function () {
-            var raw = currentLinks[slug];
-            if (typeof raw === 'string') currentLinks[slug] = { url: raw, enabled: newVal };
-            else currentLinks[slug] = Object.assign({}, raw, { enabled: newVal });
-            renderLinks(currentLinks, currentCounts);
-          })
-          .catch(function (e) { alert('Failed: ' + e.message); toggleInput.checked = !newVal; toggleInput.disabled = false; });
-      });
-      var toggleSlider = document.createElement('span');
-      toggleSlider.className = 'slider';
-      toggleLabel.appendChild(toggleInput);
-      toggleLabel.appendChild(toggleSlider);
-      var dateEl = document.createElement('div');
-      dateEl.className = 'card-date';
-      dateEl.textContent = link.createdAt ? new Date(link.createdAt).toLocaleDateString() : '—';
-      top.appendChild(toggleLabel);
-      top.appendChild(dateEl);
-
-      // destination row
-      var destRow = document.createElement('div');
-      destRow.className = 'card-dest-row';
-      var icon = document.createElement('span');
-      icon.className = 'icon';
-      icon.textContent = '🔗';
-      var dest = document.createElement('div');
-      dest.className = 'link-dest';
-      dest.textContent = link.url;
-      destRow.appendChild(icon);
-      destRow.appendChild(dest);
-
-      var divider = document.createElement('div');
-      divider.className = 'card-divider';
-
-      // short url row
-      var shortRow = document.createElement('div');
-      shortRow.className = 'short-url-row';
-      var s = document.createElement('span');
-      s.className = 'link-slug';
-      s.textContent = shortUrl.replace(/^https?:\/\//, '');
-      s.title = 'Tap to copy';
-      s.addEventListener('click', function () { copyToClipboard(shortUrl, s); });
-      if (!link.enabled) {
-        var b = document.createElement('span'); b.className = 'badge off'; b.textContent = 'off'; s.appendChild(b);
-      } else if (link.expiresAt && Date.now() > link.expiresAt) {
-        var b2 = document.createElement('span'); b2.className = 'badge expired'; b2.textContent = 'expired'; s.appendChild(b2);
-      }
-      shortRow.appendChild(s);
-
-      // icon action row
-      var iconRow = document.createElement('div');
-      iconRow.className = 'icon-row';
-
-      var copyBtn = document.createElement('button');
-      copyBtn.className = 'icon-btn';
-      copyBtn.title = 'Copy short link';
-      copyBtn.textContent = '📋';
-      copyBtn.addEventListener('click', function () { copyToClipboard(shortUrl, copyBtn); });
-
-      var editBtn = document.createElement('button');
-      editBtn.className = 'icon-btn';
-      editBtn.title = 'Edit / rename / expiry';
-      editBtn.textContent = '✎';
-      editBtn.addEventListener('click', function () { openModal(slug); });
-
-      var qrBtn = document.createElement('button');
-      qrBtn.className = 'icon-btn';
-      qrBtn.title = 'QR code';
-      qrBtn.textContent = '▦';
-      qrBtn.addEventListener('click', function () { showQr(shortUrl); });
-
-      var delBtn = document.createElement('button');
-      delBtn.className = 'icon-btn danger';
-      delBtn.title = 'Delete';
-      delBtn.textContent = '🗑';
-      delBtn.addEventListener('click', function () {
-        if (!confirm('Delete short link "' + slug + '"?')) return;
-        api('/api/links', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: slug }) })
-          .then(function () {
-            delete currentLinks[slug];
-            delete currentCounts[slug];
-            renderLinks(currentLinks, currentCounts);
-          })
-          .catch(function (e) { alert('Delete failed: ' + e.message); });
-      });
-
-      iconRow.appendChild(copyBtn);
-      iconRow.appendChild(editBtn);
-      iconRow.appendChild(qrBtn);
-      iconRow.appendChild(delBtn);
-
-      // footer: click count (left) + expiry note (right, if set)
-      var bottom = document.createElement('div');
-      bottom.className = 'card-bottom';
-      var pill = document.createElement('div');
-      pill.className = 'click-pill';
-      var count = currentCounts[slug] || 0;
-      pill.innerHTML = '<span class="n">' + count + '</span> click' + (count === 1 ? '' : 's');
-      bottom.appendChild(pill);
-
-      if (link.expiresAt) {
-        var isPast = Date.now() > link.expiresAt;
-        var expiryNote = document.createElement('div');
-        expiryNote.className = 'expiry-note' + (isPast ? ' past' : '');
-        expiryNote.textContent = (isPast ? 'expired ' : 'expires ') + formatExpiry(link.expiresAt);
-        bottom.appendChild(expiryNote);
-      }
-
-      card.appendChild(top);
-      card.appendChild(destRow);
-      card.appendChild(divider);
-      card.appendChild(shortRow);
-      card.appendChild(iconRow);
-      card.appendChild(bottom);
-      els.linksList.appendChild(card);
-    });
-  }
-
-  function copyToClipboard(text, btnEl) {
-    if (navigator.clipboard) navigator.clipboard.writeText(text);
-    var original = btnEl.textContent;
-    btnEl.textContent = '✓';
-    setTimeout(function () { btnEl.textContent = original; }, 1000);
-  }
-
-  function showQr(shortUrl) {
-    var size = '220x220';
-    els.qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + '&data=' + encodeURIComponent(shortUrl);
-    els.qrLabel.textContent = shortUrl;
-    els.qrBackdrop.classList.add('show');
-  }
-  els.qrClose.addEventListener('click', function () { els.qrBackdrop.classList.remove('show'); });
-  els.qrBackdrop.addEventListener('click', function (e) { if (e.target === els.qrBackdrop) els.qrBackdrop.classList.remove('show'); });
-
-  function loadLinks() {
-    els.linksList.innerHTML = '<div class="empty">loading…</div>';
-    api('/api/links').then(function (data) {
-      renderLinks(data.links || {}, data.counts || {});
-    }).catch(function (e) {
-      if (/unauthorized/i.test(e.message)) { doLock(); return; }
-      els.linksList.innerHTML = '<div class="empty">could not load links — ' + e.message + '</div>';
-    });
-  }
-
-  function doLock() {
-    clearCreds();
-    showApp(false);
-    els.pw.value = '';
-  }
-
-  els.unlockBtn.addEventListener('click', function () {
-    var u = els.user.value.trim() || 'admin';
-    var p = els.pw.value.trim();
-    if (!p) { setStatus(els.lockStatus, 'err', 'enter the password.'); return; }
-    setCreds(u, p);
-    setStatus(els.lockStatus, 'pending', 'checking…');
-    api('/api/links').then(function (data) {
-      setStatus(els.lockStatus, 'ok', 'unlocked');
-      showApp(true);
-      els.adminPwHint.style.display = (u === 'admin') ? 'block' : 'none';
-      els.changePwBtn.disabled = (u === 'admin');
-      renderLinks(data.links || {}, data.counts || {});
-    }).catch(function (e) {
-      clearCreds();
-      setStatus(els.lockStatus, 'err', /unauthorized/i.test(e.message) ? 'wrong username or password.' : e.message);
-    });
-  });
-
-  // --- signup ---
-  els.showSignup.addEventListener('click', function () {
-    var showing = els.signupForm.style.display !== 'none';
-    els.signupForm.style.display = showing ? 'none' : 'block';
-    els.showSignup.textContent = showing ? 'New here? Request an account' : 'Hide';
-  });
-
-  els.signupBtn.addEventListener('click', function () {
-    var u = els.signupUser.value.trim().toLowerCase();
-    var p = els.signupPw.value;
-    if (!/^[a-z0-9_]{3,20}$/.test(u)) { setStatus(els.signupStatus, 'err', 'username: 3-20 characters, lowercase letters/numbers/underscore only.'); return; }
-    if (p.length < 6) { setStatus(els.signupStatus, 'err', 'password must be at least 6 characters.'); return; }
-
-    els.signupBtn.disabled = true;
-    setStatus(els.signupStatus, 'pending', 'sending request…');
-    fetch('/api/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p }) })
-      .then(function (r) { return r.json().then(function (data) { if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status)); return data; }); })
-      .then(function (data) {
-        setStatus(els.signupStatus, 'ok', data.message || 'request sent — waiting for approval.');
-        els.signupUser.value = '';
-        els.signupPw.value = '';
-      })
-      .catch(function (e) {
-        setStatus(els.signupStatus, 'err', e.message);
-      })
-      .finally(function () {
-        els.signupBtn.disabled = false;
-      });
-  });
-
-  // --- change password ---
-  els.changePwBtn.addEventListener('click', function () {
-    var oldP = els.oldPw.value;
-    var newP = els.newPw.value;
-    if (!oldP) { setStatus(els.changePwStatus, 'err', 'enter your current password.'); return; }
-    if (newP.length < 6) { setStatus(els.changePwStatus, 'err', 'new password must be at least 6 characters.'); return; }
-
-    var savedPw = pw();
-    setCreds(user(), oldP); // use the typed-in current password to authenticate this one request
-    els.changePwBtn.disabled = true;
-    setStatus(els.changePwStatus, 'pending', 'updating…');
-    api('/api/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ newPassword: newP }) })
-      .then(function () {
-        setCreds(user(), newP); // keep the session working with the new password
-        setStatus(els.changePwStatus, 'ok', 'password updated.');
-        els.oldPw.value = '';
-        els.newPw.value = '';
-      })
-      .catch(function (e) {
-        setCreds(user(), savedPw); // restore the working session password on failure
-        setStatus(els.changePwStatus, 'err', e.message);
-      })
-      .finally(function () {
-        els.changePwBtn.disabled = false;
-      });
-  });
-
-  function slugify(s) {
-    return s.trim().toLowerCase().replace(/[^a-z0-9\-_]+/g, '-').replace(/^-+|-+$/g, '');
-  }
-
-  els.createBtn.addEventListener('click', function () {
-    var slug = slugify(els.newSlug.value || '');
-    var dest = els.newDest.value.trim();
-    if (!/^https?:\/\//i.test(dest)) { setStatus(els.createStatus, 'err', 'destination must start with http:// or https://'); return; }
-
-    els.createBtn.disabled = true;
-    setStatus(els.createStatus, 'pending', 'saving…');
-
-    api('/api/links', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: slug, dest: dest }) })
-      .then(function (data) {
-        setStatus(els.createStatus, 'ok', 'created ' + shortUrlFor(data.slug));
-        els.newSlug.value = '';
-        els.newDest.value = '';
-        currentLinks[data.slug] = { url: data.dest, createdAt: Date.now(), enabled: true, expiresAt: null };
-        currentCounts[data.slug] = 0;
-        renderLinks(currentLinks, currentCounts);
-      })
-      .catch(function (e) {
-        setStatus(els.createStatus, 'err', e.message);
-      })
-      .finally(function () {
-        els.createBtn.disabled = false;
-      });
-  });
-
-  // --- detail / edit modal ---
-  var modalOriginalSlug = null;
-
-  function openModal(slug) {
-    var link = normalize(currentLinks[slug]);
-    modalOriginalSlug = slug;
-    els.modalSlug.textContent = '/' + slug;
-    var count = currentCounts[slug] || 0;
-    var created = link.createdAt ? ('created ' + new Date(link.createdAt).toLocaleString()) : 'created before this update — no timestamp recorded';
-    els.modalMeta.textContent = created + ' · ' + count + ' click' + (count === 1 ? '' : 's');
-    els.modalAlias.value = slug;
-    els.modalDest.value = link.url;
-    els.modalEnabled.checked = link.enabled;
-    els.modalExpiry.value = link.expiresAt ? toLocalDatetimeValue(link.expiresAt) : '';
-    els.modalStatus.className = 'status';
-    els.modalBackdrop.classList.add('show');
-  }
-
-  function closeModal() {
-    els.modalBackdrop.classList.remove('show');
-    modalOriginalSlug = null;
-  }
-
-  els.modalCancel.addEventListener('click', closeModal);
-  els.modalBackdrop.addEventListener('click', function (e) {
-    if (e.target === els.modalBackdrop) closeModal();
-  });
-
-  els.modalCopy.addEventListener('click', function () {
-    var url = shortUrlFor(modalOriginalSlug);
-    if (navigator.clipboard) navigator.clipboard.writeText(url);
-    els.modalCopy.textContent = 'Copied';
-    setTimeout(function () { els.modalCopy.textContent = 'Copy link'; }, 1200);
-  });
-
-  els.modalDelete.addEventListener('click', function () {
-    if (!confirm('Delete short link "' + modalOriginalSlug + '"?')) return;
-    els.modalDelete.disabled = true;
-    api('/api/links', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: modalOriginalSlug }) })
-      .then(function () {
-        delete currentLinks[modalOriginalSlug];
-        delete currentCounts[modalOriginalSlug];
-        closeModal();
-        renderLinks(currentLinks, currentCounts);
-      })
-      .catch(function (e) {
-        setStatus(els.modalStatus, 'err', e.message);
-        els.modalDelete.disabled = false;
-      });
-  });
-
-  els.modalSave.addEventListener('click', function () {
-    var newSlug = slugify(els.modalAlias.value || '');
-    var dest = els.modalDest.value.trim();
-    if (!newSlug) { setStatus(els.modalStatus, 'err', 'alias cannot be empty.'); return; }
-    if (!/^https?:\/\//i.test(dest)) { setStatus(els.modalStatus, 'err', 'destination must start with http:// or https://'); return; }
-
-    var body = {
-      slug: modalOriginalSlug,
-      newSlug: newSlug,
-      dest: dest,
-      enabled: els.modalEnabled.checked
-    };
-    if (els.modalExpiry.value) {
-      body.expiresAt = new Date(els.modalExpiry.value).getTime();
-    } else {
-      body.clearExpiry = true;
-    }
-
-    els.modalSave.disabled = true;
-    setStatus(els.modalStatus, 'pending', 'saving…');
-    api('/api/links', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-      .then(function (data) {
-        var finalSlug = data.slug;
-        var old = normalize(currentLinks[modalOriginalSlug]);
-        var updated = {
-          url: dest,
-          createdAt: old.createdAt,
-          enabled: els.modalEnabled.checked,
-          expiresAt: body.clearExpiry ? null : body.expiresAt
-        };
-        if (finalSlug !== modalOriginalSlug) {
-          delete currentLinks[modalOriginalSlug];
-          currentCounts[finalSlug] = currentCounts[modalOriginalSlug] || 0;
-          delete currentCounts[modalOriginalSlug];
-        }
-        currentLinks[finalSlug] = updated;
-        closeModal();
-        renderLinks(currentLinks, currentCounts);
-      })
-      .catch(function (e) {
-        setStatus(els.modalStatus, 'err', e.message);
-      })
-      .finally(function () {
-        els.modalSave.disabled = false;
-      });
-  });
-
-  // Auto-unlock if credentials are already in this session.
-  if (user() && pw()) {
-    api('/api/links').then(function (data) {
-      showApp(true);
-      els.adminPwHint.style.display = (user() === 'admin') ? 'block' : 'none';
-      els.changePwBtn.disabled = (user() === 'admin');
-      renderLinks(data.links || {}, data.counts || {});
-    }).catch(function () {
-      clearCreds();
-      showApp(false);
-    });
-  }
-
-  // --- PWA install ---
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(function () {});
-  }
-
-  var installBar = document.getElementById('installBar');
-  var installText = document.getElementById('installText');
-  var installBtn = document.getElementById('installBtn');
-  var installDismiss = document.getElementById('installDismiss');
-  var deferredPrompt = null;
-  var DISMISS_KEY = 'ls_install_dismissed';
-
-  function isStandalone() {
-    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-  }
-  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-
-  if (!isStandalone() && !localStorage.getItem(DISMISS_KEY)) {
-    if (isIOS) {
-      installText.textContent = 'Install this app: tap Share, then "Add to Home Screen".';
-      installBtn.style.display = 'none';
-      installBar.classList.add('show');
-    } else {
-      window.addEventListener('beforeinstallprompt', function (e) {
-        e.preventDefault();
-        deferredPrompt = e;
-        installBar.classList.add('show');
-      });
+  async function discoverClocks(){
+    const repoInfo = detectRepo();
+    if (!repoInfo) return FALLBACK_CLOCKS;
+    try {
+      const res = await fetch(
+        `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/contents/clocks`
+      );
+      if (!res.ok) throw new Error('GitHub API error ' + res.status);
+      const files = await res.json();
+      const clocks = files
+        .filter(f => f.type === 'file' && /\.html?$/i.test(f.name))
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(f => ({ name: toTitle(f.name), path: 'clocks/' + f.name }));
+      return clocks.length ? clocks : FALLBACK_CLOCKS;
+    } catch (err) {
+      console.warn('Clock auto-discovery failed, using fallback list:', err);
+      return FALLBACK_CLOCKS;
     }
   }
 
-  installBtn.addEventListener('click', function () {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.finally(function () {
-      deferredPrompt = null;
-      installBar.classList.remove('show');
+  const track = document.getElementById('track');
+  const bezel = document.getElementById('bezel');
+  const titleEl = document.getElementById('title');
+  const countEl = document.getElementById('count');
+  const pathLabel = document.getElementById('pathLabel');
+  const hint = document.getElementById('hint');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  let CLOCKS = [];
+  let current = 0;
+  let viewportWidth = window.innerWidth;
+  let dragging = false;
+  let dragStartX = 0;
+  let dragDeltaX = 0;
+  let hasInteracted = false;
+
+  function buildPanes(){
+    track.innerHTML = '';
+    bezel.innerHTML = '';
+    CLOCKS.forEach((clock, i) => {
+      const pane = document.createElement('div');
+      pane.className = 'pane';
+      const iframe = document.createElement('iframe');
+      iframe.src = clock.path;
+      iframe.title = clock.name + ' clock';
+      iframe.loading = i === 0 ? 'eager' : 'lazy';
+      pane.appendChild(iframe);
+      track.appendChild(pane);
+
+      const tick = document.createElement('div');
+      tick.className = 'tick' + (i === 0 ? ' active' : '');
+      bezel.appendChild(tick);
     });
+  }
+
+  function updateChrome(){
+    titleEl.textContent = CLOCKS[current].name;
+    pathLabel.textContent = '/' + CLOCKS[current].path;
+    countEl.textContent = String(current + 1).padStart(2,'0') + ' / ' + String(CLOCKS.length).padStart(2,'0');
+    [...bezel.children].forEach((t, i) => t.classList.toggle('active', i === current));
+    prevBtn.style.visibility = current === 0 ? 'hidden' : 'visible';
+    nextBtn.style.visibility = current === CLOCKS.length - 1 ? 'hidden' : 'visible';
+  }
+
+  function goTo(index, animate = true){
+    current = Math.max(0, Math.min(CLOCKS.length - 1, index));
+    track.style.transition = animate ? 'transform 0.42s cubic-bezier(.22,.61,.36,1)' : 'none';
+    track.style.transform = `translateX(${-current * viewportWidth}px)`;
+    updateChrome();
+    markInteracted();
+  }
+
+  function markInteracted(){
+    if (hasInteracted) return;
+    hasInteracted = true;
+    hint.classList.add('faded');
+  }
+
+  window.addEventListener('resize', () => {
+    viewportWidth = window.innerWidth;
+    goTo(current, false);
   });
 
-  installDismiss.addEventListener('click', function () {
-    localStorage.setItem(DISMISS_KEY, '1');
-    installBar.classList.remove('show');
+  prevBtn.addEventListener('click', () => goTo(current - 1));
+  nextBtn.addEventListener('click', () => goTo(current + 1));
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') goTo(current + 1);
+    if (e.key === 'ArrowLeft') goTo(current - 1);
   });
-})();
+
+  // ---- swipe / drag handling ----
+  const viewportEl = document.getElementById('viewport');
+
+  function onStart(x){
+    dragging = true;
+    dragStartX = x;
+    dragDeltaX = 0;
+    track.style.transition = 'none';
+    markInteracted();
+  }
+  function onMove(x){
+    if (!dragging) return;
+    dragDeltaX = x - dragStartX;
+    // resist dragging past the ends
+    let resist = 1;
+    if ((current === 0 && dragDeltaX > 0) || (current === CLOCKS.length - 1 && dragDeltaX < 0)){
+      resist = 0.35;
+    }
+    const offset = -current * viewportWidth + dragDeltaX * resist;
+    track.style.transform = `translateX(${offset}px)`;
+  }
+  function onEnd(){
+    if (!dragging) return;
+    dragging = false;
+    const threshold = viewportWidth * 0.16;
+    if (dragDeltaX <= -threshold) goTo(current + 1);
+    else if (dragDeltaX >= threshold) goTo(current - 1);
+    else goTo(current);
+  }
+
+  viewportEl.addEventListener('touchstart', (e) => onStart(e.touches[0].clientX), { passive:true });
+  viewportEl.addEventListener('touchmove', (e) => onMove(e.touches[0].clientX), { passive:true });
+  viewportEl.addEventListener('touchend', onEnd);
+
+  let mouseDown = false;
+  viewportEl.addEventListener('mousedown', (e) => { mouseDown = true; onStart(e.clientX); });
+  window.addEventListener('mousemove', (e) => { if (mouseDown) onMove(e.clientX); });
+  window.addEventListener('mouseup', () => { if (mouseDown){ mouseDown = false; onEnd(); } });
+
+  // init
+  (async function init(){
+    CLOCKS = await discoverClocks();
+    buildPanes();
+    goTo(0, false);
+  })();
 </script>
 </body>
 </html>
