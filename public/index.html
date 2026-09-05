@@ -93,7 +93,9 @@
   }
   .icon-btn:hover { border-color: var(--amber-dim); }
   .icon-btn.danger { color: var(--red); }
-  .card-bottom { display: flex; align-items: center; gap: 8px; }
+  .card-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .expiry-note { font-size: 11px; color: var(--muted); text-align: right; }
+  .expiry-note.past { color: var(--red); }
   .click-pill {
     font-family: var(--mono); font-size: 11px; color: var(--text); background: var(--panel);
     border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; flex-shrink: 0;
@@ -144,6 +146,11 @@
   .install-bar span { color: var(--text); }
   .install-bar button { background: var(--amber); color: #241a08; padding: 8px 14px; font-size: 13px; }
   .install-bar .dismiss { background: transparent; color: var(--muted); border: 1px solid var(--line); padding: 8px 10px; }
+  details summary { cursor: pointer; font-family: var(--mono); font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); list-style: none; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::before { content: "▸ "; color: var(--amber); }
+  details[open] summary::before { content: "▾ "; }
+  details .panel-inner { padding-top: 14px; }
 </style>
 </head>
 <body>
@@ -175,10 +182,37 @@
     <input type="password" id="pw" placeholder="••••••••" autocomplete="current-password">
     <button class="btn-primary" id="unlockBtn">Unlock</button>
     <div class="status" id="lockStatus"></div>
-    <div class="hint">Accounts are set with the <code>ADMIN_USERS</code> environment variable (JSON, e.g. <code>{"nyn":"secret"}</code>) — or use username <code>admin</code> with <code>ADMIN_PASSWORD</code>. Stored only in this browser after unlocking.</div>
+    <div style="text-align:center; margin-top:14px;">
+      <button class="btn-ghost" id="showSignup" style="font-size:12px;">New here? Request an account</button>
+    </div>
+
+    <div id="signupForm" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--line);">
+      <label for="signupUser">Choose a username</label>
+      <input type="text" id="signupUser" placeholder="e.g. nyn" autocomplete="off" autocapitalize="off">
+      <label for="signupPw">Choose a password</label>
+      <input type="password" id="signupPw" placeholder="at least 6 characters" autocomplete="new-password">
+      <button class="btn-primary" id="signupBtn">Request account</button>
+      <div class="status" id="signupStatus"></div>
+      <div class="hint">Your request goes to the admin for approval — you'll be able to log in once it's approved.</div>
+    </div>
   </section>
 
   <div id="appPanels" style="display:none; flex-direction:column; gap:18px;">
+    <section class="panel">
+      <details>
+        <summary>Account settings</summary>
+        <div class="panel-inner">
+          <label for="oldPw">Current password</label>
+          <input type="password" id="oldPw" autocomplete="current-password">
+          <label for="newPw">New password</label>
+          <input type="password" id="newPw" placeholder="at least 6 characters" autocomplete="new-password">
+          <button class="btn-primary" id="changePwBtn">Change password</button>
+          <div class="status" id="changePwStatus"></div>
+          <div class="hint" id="adminPwHint" style="display:none;">The <code>admin</code> account's password can only be changed via the <code>ADMIN_PASSWORD</code> environment variable in Cloudflare — not here.</div>
+        </div>
+      </details>
+    </section>
+
     <section class="panel">
       <h2>New link</h2>
       <label for="newSlug">Slug <span style="color:var(--muted); text-transform:none;">(optional — random if left blank)</span></label>
@@ -217,7 +251,7 @@
     </div>
 
     <label for="modalExpiry">Expires <span style="color:var(--muted); text-transform:none;">(optional)</span></label>
-    <input type="date" id="modalExpiry">
+    <input type="datetime-local" id="modalExpiry">
 
     <div class="modal-actions">
       <button class="btn-secondary" id="modalCancel">Cancel</button>
@@ -289,7 +323,18 @@
     qrBackdrop: document.getElementById('qrBackdrop'),
     qrImg: document.getElementById('qrImg'),
     qrLabel: document.getElementById('qrLabel'),
-    qrClose: document.getElementById('qrClose')
+    qrClose: document.getElementById('qrClose'),
+    showSignup: document.getElementById('showSignup'),
+    signupForm: document.getElementById('signupForm'),
+    signupUser: document.getElementById('signupUser'),
+    signupPw: document.getElementById('signupPw'),
+    signupBtn: document.getElementById('signupBtn'),
+    signupStatus: document.getElementById('signupStatus'),
+    oldPw: document.getElementById('oldPw'),
+    newPw: document.getElementById('newPw'),
+    changePwBtn: document.getElementById('changePwBtn'),
+    changePwStatus: document.getElementById('changePwStatus'),
+    adminPwHint: document.getElementById('adminPwHint')
   };
 
   function user() { return sessionStorage.getItem(USER_KEY) || ''; }
@@ -320,6 +365,16 @@
 
   function shortUrlFor(slug) {
     return location.origin + '/' + slug;
+  }
+
+  function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+  function toLocalDatetimeValue(ms) {
+    var d = new Date(ms);
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + 'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  }
+  function formatExpiry(ms) {
+    var d = new Date(ms);
+    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) + ', ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
   }
 
   function normalize(value) {
@@ -360,10 +415,16 @@
       toggleInput.type = 'checkbox';
       toggleInput.checked = link.enabled;
       toggleInput.addEventListener('change', function () {
+        var newVal = toggleInput.checked;
         toggleInput.disabled = true;
-        api('/api/links', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: slug, enabled: toggleInput.checked }) })
-          .then(loadLinks)
-          .catch(function (e) { alert('Failed: ' + e.message); toggleInput.checked = !toggleInput.checked; toggleInput.disabled = false; });
+        api('/api/links', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: slug, enabled: newVal }) })
+          .then(function () {
+            var raw = currentLinks[slug];
+            if (typeof raw === 'string') currentLinks[slug] = { url: raw, enabled: newVal };
+            else currentLinks[slug] = Object.assign({}, raw, { enabled: newVal });
+            renderLinks(currentLinks, currentCounts);
+          })
+          .catch(function (e) { alert('Failed: ' + e.message); toggleInput.checked = !newVal; toggleInput.disabled = false; });
       });
       var toggleSlider = document.createElement('span');
       toggleSlider.className = 'slider';
@@ -415,12 +476,6 @@
       copyBtn.textContent = '📋';
       copyBtn.addEventListener('click', function () { copyToClipboard(shortUrl, copyBtn); });
 
-      var openBtn = document.createElement('button');
-      openBtn.className = 'icon-btn';
-      openBtn.title = 'Open destination';
-      openBtn.textContent = '↗';
-      openBtn.addEventListener('click', function () { window.open(link.url, '_blank', 'noopener'); });
-
       var editBtn = document.createElement('button');
       editBtn.className = 'icon-btn';
       editBtn.title = 'Edit / rename / expiry';
@@ -440,17 +495,20 @@
       delBtn.addEventListener('click', function () {
         if (!confirm('Delete short link "' + slug + '"?')) return;
         api('/api/links', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: slug }) })
-          .then(loadLinks)
+          .then(function () {
+            delete currentLinks[slug];
+            delete currentCounts[slug];
+            renderLinks(currentLinks, currentCounts);
+          })
           .catch(function (e) { alert('Delete failed: ' + e.message); });
       });
 
       iconRow.appendChild(copyBtn);
-      iconRow.appendChild(openBtn);
       iconRow.appendChild(editBtn);
       iconRow.appendChild(qrBtn);
       iconRow.appendChild(delBtn);
 
-      // footer: click count
+      // footer: click count (left) + expiry note (right, if set)
       var bottom = document.createElement('div');
       bottom.className = 'card-bottom';
       var pill = document.createElement('div');
@@ -458,6 +516,14 @@
       var count = currentCounts[slug] || 0;
       pill.innerHTML = '<span class="n">' + count + '</span> click' + (count === 1 ? '' : 's');
       bottom.appendChild(pill);
+
+      if (link.expiresAt) {
+        var isPast = Date.now() > link.expiresAt;
+        var expiryNote = document.createElement('div');
+        expiryNote.className = 'expiry-note' + (isPast ? ' past' : '');
+        expiryNote.textContent = (isPast ? 'expired ' : 'expires ') + formatExpiry(link.expiresAt);
+        bottom.appendChild(expiryNote);
+      }
 
       card.appendChild(top);
       card.appendChild(destRow);
@@ -510,11 +576,70 @@
     api('/api/links').then(function (data) {
       setStatus(els.lockStatus, 'ok', 'unlocked');
       showApp(true);
+      els.adminPwHint.style.display = (u === 'admin') ? 'block' : 'none';
+      els.changePwBtn.disabled = (u === 'admin');
       renderLinks(data.links || {}, data.counts || {});
     }).catch(function (e) {
       clearCreds();
       setStatus(els.lockStatus, 'err', /unauthorized/i.test(e.message) ? 'wrong username or password.' : e.message);
     });
+  });
+
+  // --- signup ---
+  els.showSignup.addEventListener('click', function () {
+    var showing = els.signupForm.style.display !== 'none';
+    els.signupForm.style.display = showing ? 'none' : 'block';
+    els.showSignup.textContent = showing ? 'New here? Request an account' : 'Hide';
+  });
+
+  els.signupBtn.addEventListener('click', function () {
+    var u = els.signupUser.value.trim().toLowerCase();
+    var p = els.signupPw.value;
+    if (!/^[a-z0-9_]{3,20}$/.test(u)) { setStatus(els.signupStatus, 'err', 'username: 3-20 characters, lowercase letters/numbers/underscore only.'); return; }
+    if (p.length < 6) { setStatus(els.signupStatus, 'err', 'password must be at least 6 characters.'); return; }
+
+    els.signupBtn.disabled = true;
+    setStatus(els.signupStatus, 'pending', 'sending request…');
+    fetch('/api/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p }) })
+      .then(function (r) { return r.json().then(function (data) { if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status)); return data; }); })
+      .then(function (data) {
+        setStatus(els.signupStatus, 'ok', data.message || 'request sent — waiting for approval.');
+        els.signupUser.value = '';
+        els.signupPw.value = '';
+      })
+      .catch(function (e) {
+        setStatus(els.signupStatus, 'err', e.message);
+      })
+      .finally(function () {
+        els.signupBtn.disabled = false;
+      });
+  });
+
+  // --- change password ---
+  els.changePwBtn.addEventListener('click', function () {
+    var oldP = els.oldPw.value;
+    var newP = els.newPw.value;
+    if (!oldP) { setStatus(els.changePwStatus, 'err', 'enter your current password.'); return; }
+    if (newP.length < 6) { setStatus(els.changePwStatus, 'err', 'new password must be at least 6 characters.'); return; }
+
+    var savedPw = pw();
+    setCreds(user(), oldP); // use the typed-in current password to authenticate this one request
+    els.changePwBtn.disabled = true;
+    setStatus(els.changePwStatus, 'pending', 'updating…');
+    api('/api/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ newPassword: newP }) })
+      .then(function () {
+        setCreds(user(), newP); // keep the session working with the new password
+        setStatus(els.changePwStatus, 'ok', 'password updated.');
+        els.oldPw.value = '';
+        els.newPw.value = '';
+      })
+      .catch(function (e) {
+        setCreds(user(), savedPw); // restore the working session password on failure
+        setStatus(els.changePwStatus, 'err', e.message);
+      })
+      .finally(function () {
+        els.changePwBtn.disabled = false;
+      });
   });
 
   function slugify(s) {
@@ -530,11 +655,13 @@
     setStatus(els.createStatus, 'pending', 'saving…');
 
     api('/api/links', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: slug, dest: dest }) })
-      .then(function () {
-        setStatus(els.createStatus, 'ok', 'created ' + shortUrlFor(slug));
+      .then(function (data) {
+        setStatus(els.createStatus, 'ok', 'created ' + shortUrlFor(data.slug));
         els.newSlug.value = '';
         els.newDest.value = '';
-        loadLinks();
+        currentLinks[data.slug] = { url: data.dest, createdAt: Date.now(), enabled: true, expiresAt: null };
+        currentCounts[data.slug] = 0;
+        renderLinks(currentLinks, currentCounts);
       })
       .catch(function (e) {
         setStatus(els.createStatus, 'err', e.message);
@@ -557,7 +684,7 @@
     els.modalAlias.value = slug;
     els.modalDest.value = link.url;
     els.modalEnabled.checked = link.enabled;
-    els.modalExpiry.value = link.expiresAt ? new Date(link.expiresAt).toISOString().slice(0, 10) : '';
+    els.modalExpiry.value = link.expiresAt ? toLocalDatetimeValue(link.expiresAt) : '';
     els.modalStatus.className = 'status';
     els.modalBackdrop.classList.add('show');
   }
@@ -583,7 +710,12 @@
     if (!confirm('Delete short link "' + modalOriginalSlug + '"?')) return;
     els.modalDelete.disabled = true;
     api('/api/links', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: modalOriginalSlug }) })
-      .then(function () { closeModal(); loadLinks(); })
+      .then(function () {
+        delete currentLinks[modalOriginalSlug];
+        delete currentCounts[modalOriginalSlug];
+        closeModal();
+        renderLinks(currentLinks, currentCounts);
+      })
       .catch(function (e) {
         setStatus(els.modalStatus, 'err', e.message);
         els.modalDelete.disabled = false;
@@ -603,7 +735,7 @@
       enabled: els.modalEnabled.checked
     };
     if (els.modalExpiry.value) {
-      body.expiresAt = new Date(els.modalExpiry.value + 'T23:59:59').getTime();
+      body.expiresAt = new Date(els.modalExpiry.value).getTime();
     } else {
       body.clearExpiry = true;
     }
@@ -611,9 +743,23 @@
     els.modalSave.disabled = true;
     setStatus(els.modalStatus, 'pending', 'saving…');
     api('/api/links', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-      .then(function () {
+      .then(function (data) {
+        var finalSlug = data.slug;
+        var old = normalize(currentLinks[modalOriginalSlug]);
+        var updated = {
+          url: dest,
+          createdAt: old.createdAt,
+          enabled: els.modalEnabled.checked,
+          expiresAt: body.clearExpiry ? null : body.expiresAt
+        };
+        if (finalSlug !== modalOriginalSlug) {
+          delete currentLinks[modalOriginalSlug];
+          currentCounts[finalSlug] = currentCounts[modalOriginalSlug] || 0;
+          delete currentCounts[modalOriginalSlug];
+        }
+        currentLinks[finalSlug] = updated;
         closeModal();
-        loadLinks();
+        renderLinks(currentLinks, currentCounts);
       })
       .catch(function (e) {
         setStatus(els.modalStatus, 'err', e.message);
@@ -627,6 +773,8 @@
   if (user() && pw()) {
     api('/api/links').then(function (data) {
       showApp(true);
+      els.adminPwHint.style.display = (user() === 'admin') ? 'block' : 'none';
+      els.changePwBtn.disabled = (user() === 'admin');
       renderLinks(data.links || {}, data.counts || {});
     }).catch(function () {
       clearCreds();
