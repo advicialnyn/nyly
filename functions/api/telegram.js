@@ -1,4 +1,4 @@
-import { createLink, updateLink, deleteLink, readLinks, normalizeLink, slugify } from '../_lib/github.js';
+import { createLink, updateLink, deleteLink, readLinks, normalizeLink, slugify, approveUser } from '../_lib/github.js';
 import {
   sendMessage, notifyChannel, formatLinkAnnouncement, formatMultiAnnouncement,
   formatBotReply, botReplyButtons, formatMultiReply, multiReplyButtons, formatLinkList
@@ -60,6 +60,7 @@ export async function onRequestPost(context) {
     if (cmd === '/expire') return await handleExpire(env, chatId, rest);
     if (cmd === '/rename') return await handleRename(env, chatId, rest);
     if (cmd === '/edit') return await handleEdit(env, chatId, rest);
+    if (cmd === '/adduser') return await handleAddUser(env, chatId, rest);
   } catch (e) {
     await sendMessage(env, chatId, `Error: ${e.message}`);
     return new Response('ok');
@@ -93,6 +94,8 @@ async function handleHelp(env, chatId) {
     '• <code>/expire slug off</code> — remove the expiry\n' +
     '• <code>/rename slug newslug</code> — change the alias\n' +
     '• <code>/edit slug https://newdestination.com</code> — change where it points\n\n' +
+    '<b>Accounts</b>\n' +
+    'When someone requests an account on the website, you get a message here with a ready-to-send <code>/adduser</code> command — just tap and send it to approve them.\n\n' +
     'Every link created here also gets logged to the channel, if one is set up.'
   );
   return new Response('ok');
@@ -182,7 +185,32 @@ async function handleEdit(env, chatId, rest) {
   return new Response('ok');
 }
 
+// ---- approve a signup ----
+
+async function handleAddUser(env, chatId, rest) {
+  const parts = rest.split(/\s+/);
+  const username = (parts[0] || '').trim().toLowerCase();
+  const password = parts.slice(1).join(' ');
+  if (!username || !password) {
+    await sendMessage(env, chatId, 'Usage: /adduser username password\n\n(copy both straight from the signup notification)');
+    return new Response('ok');
+  }
+  await approveUser(env, username, password);
+  await sendMessage(env, chatId, `✅ Approved <b>${username}</b> — they can log in on the website now.`);
+  return new Response('ok');
+}
+
 // ---- create (single or multi-line) ----
+
+function ownerForChat(env, chatId) {
+  try {
+    const map = env.TELEGRAM_USER_MAP ? JSON.parse(env.TELEGRAM_USER_MAP) : {};
+    if (map[String(chatId)]) return map[String(chatId)];
+  } catch (e) {
+    // ignore malformed map, fall through
+  }
+  return 'telegram';
+}
 
 function extractCustomSlug(line, match) {
   const before = line.slice(0, match.index).trim();
@@ -211,7 +239,8 @@ async function handleCreate(env, chatId, text) {
       const slug = await createLink(env, {
         slug: customSlug ? customSlug.replace(/[^a-z0-9-_]+/g, '-') : null,
         dest,
-        message: `add short link via telegram: ${customSlug || '(auto)'}`
+        message: `add short link via telegram: ${customSlug || '(auto)'}`,
+        owner: ownerForChat(env, chatId)
       });
       const shortUrl = `${(env.SITE_URL || '').replace(/\/$/, '')}/${slug}`;
       await sendMessage(env, chatId, formatBotReply(env, shortUrl, dest), botReplyButtons(dest));
@@ -230,7 +259,8 @@ async function handleCreate(env, chatId, text) {
       const slug = await createLink(env, {
         slug: customSlug ? customSlug.replace(/[^a-z0-9-_]+/g, '-') : null,
         dest,
-        message: `add short link via telegram: ${customSlug || '(auto)'}`
+        message: `add short link via telegram: ${customSlug || '(auto)'}`,
+        owner: ownerForChat(env, chatId)
       });
       const shortUrl = `${(env.SITE_URL || '').replace(/\/$/, '')}/${slug}`;
       results.push({ line, slug, dest, shortUrl });
