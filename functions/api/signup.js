@@ -1,4 +1,4 @@
-import { sendTelegramMessage } from '../_lib/telegram.js';
+import { sendTelegramMessage } from './telegram.js';
 
 export async function onRequestPost(context) {
   try {
