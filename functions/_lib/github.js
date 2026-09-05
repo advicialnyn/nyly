@@ -92,7 +92,7 @@ export async function writeCounts(env, map, sha, message) {
 
 // Increments one link's count, retrying a few times if another click is
 // writing at the same moment (GitHub rejects the write with a 409 if the
-// file changed since we read it — we just re-read and try again).
+// file changed since we read it â€” we just re-read and try again).
 export async function incrementCount(env, slug, attempts = 4) {
   for (let i = 0; i < attempts; i++) {
     const { map, sha } = await readCounts(env);
@@ -116,7 +116,7 @@ async function deleteCount(env, slug) {
       await writeCounts(env, map, sha, `remove click count: ${slug}`);
     }
   } catch (e) {
-    // best-effort — a stray leftover counter is harmless
+    // best-effort â€” a stray leftover counter is harmless
   }
 }
 
@@ -148,7 +148,7 @@ export async function deleteLink(env, slug) {
 // Shape: { approved: { username: sha256hex }, pending: { username: { hash, requestedAt } } }
 // "admin" is special: it authenticates against ADMIN_PASSWORD / legacy ADMIN_USERS
 // (Cloudflare env vars) rather than users.json, since a Worker can't rewrite its
-// own env vars — those still have to be changed by hand in the dashboard.
+// own env vars â€” those still have to be changed by hand in the dashboard.
 
 export async function readUsers(env) {
   return readJsonFile(env, 'users.json');
@@ -297,7 +297,7 @@ export async function createLink(env, { slug, dest, message, owner }) {
 }
 
 // Updates an existing link: rename (slug -> newSlug), change destination,
-// enable/disable, or set/clear an expiry — any subset of these at once.
+// enable/disable, or set/clear an expiry â€” any subset of these at once.
 export async function updateLink(env, { slug, newSlug, dest, enabled, expiresAt, clearExpiry }) {
   const { map, sha } = await readLinks(env);
   if (!(slug in map)) throw new Error(`slug "${slug}" not found`);
