@@ -77,25 +77,25 @@ export async function onRequestGet() {
 
 async function handleHelp(env, chatId) {
   await sendMessage(env, chatId,
-    '🔗 <b>linkstore bot — how it works</b>\n\n' +
+    'ðŸ”— <b>linkstore bot â€” how it works</b>\n\n' +
     '<b>1. Create a link</b>\n' +
-    'Just send a URL:\n<code>https://example.com/page</code>\n→ makes a random short link\n\n' +
+    'Just send a URL:\n<code>https://example.com/page</code>\nâ†’ makes a random short link\n\n' +
     'Add your own slug, before or after the link:\n<code>myvid https://example.com/page</code>\n<code>https://example.com/page myvid</code>\n\n' +
     '<b>2. Create several at once</b>\n' +
-    'Send each link on its own line in one message — one message, many short links back.\n\n' +
+    'Send each link on its own line in one message â€” one message, many short links back.\n\n' +
     '<b>3. Manage a link</b>\n' +
-    'Every command below accepts either the slug on its own, or the full short link — whichever is easier to grab:\n' +
+    'Every command below accepts either the slug on its own, or the full short link â€” whichever is easier to grab:\n' +
     '<code>/delete myvid</code> or <code>/delete https://nyly.pages.dev/myvid</code>\n\n' +
-    '• <code>/list</code> — show your links (<code>/list 15</code> for the next page)\n' +
-    '• <code>/delete slug</code> — remove a link\n' +
-    '• <code>/enable slug</code> / <code>/disable slug</code> — turn a link on/off without deleting it\n' +
-    '• <code>/expire slug 7</code> — expires in 7 days\n' +
-    '• <code>/expire slug 2026-12-31</code> — expires on that date\n' +
-    '• <code>/expire slug off</code> — remove the expiry\n' +
-    '• <code>/rename slug newslug</code> — change the alias\n' +
-    '• <code>/edit slug https://newdestination.com</code> — change where it points\n\n' +
+    'â€¢ <code>/list</code> â€” show your links (<code>/list 15</code> for the next page)\n' +
+    'â€¢ <code>/delete slug</code> â€” remove a link\n' +
+    'â€¢ <code>/enable slug</code> / <code>/disable slug</code> â€” turn a link on/off without deleting it\n' +
+    'â€¢ <code>/expire slug 7</code> â€” expires in 7 days\n' +
+    'â€¢ <code>/expire slug 2026-12-31</code> â€” expires on that date\n' +
+    'â€¢ <code>/expire slug off</code> â€” remove the expiry\n' +
+    'â€¢ <code>/rename slug newslug</code> â€” change the alias\n' +
+    'â€¢ <code>/edit slug https://newdestination.com</code> â€” change where it points\n\n' +
     '<b>Accounts</b>\n' +
-    'When someone requests an account on the website, you get a message here with a ready-to-send <code>/adduser</code> command — just tap and send it to approve them.\n\n' +
+    'When someone requests an account on the website, you get a message here with a ready-to-send <code>/adduser</code> command â€” just tap and send it to approve them.\n\n' +
     'Every link created here also gets logged to the channel, if one is set up.'
   );
   return new Response('ok');
@@ -118,7 +118,7 @@ async function handleDelete(env, chatId, rest) {
   const slug = resolveSlug(rest);
   if (!slug) { await sendMessage(env, chatId, 'Usage: /delete slug (or the full short link)'); return new Response('ok'); }
   await deleteLink(env, slug);
-  await sendMessage(env, chatId, `🗑 Deleted /${slug}`);
+  await sendMessage(env, chatId, `ðŸ—‘ Deleted /${slug}`);
   return new Response('ok');
 }
 
@@ -128,7 +128,7 @@ async function handleToggle(env, chatId, rest, enabled) {
   const slug = resolveSlug(rest);
   if (!slug) { await sendMessage(env, chatId, `Usage: /${enabled ? 'enable' : 'disable'} slug (or the full short link)`); return new Response('ok'); }
   await updateLink(env, { slug, enabled });
-  await sendMessage(env, chatId, `${enabled ? '✅ Enabled' : '⛔ Disabled'} /${slug}`);
+  await sendMessage(env, chatId, `${enabled ? 'âœ… Enabled' : 'â›” Disabled'} /${slug}`);
   return new Response('ok');
 }
 
@@ -138,11 +138,11 @@ async function handleExpire(env, chatId, rest) {
   const parts = rest.split(/\s+/);
   const slug = resolveSlug(parts[0] || '');
   const arg = (parts[1] || '').toLowerCase();
-  if (!slug || !arg) { await sendMessage(env, chatId, 'Usage: /expire slug 7  ·  /expire slug 2026-12-31  ·  /expire slug off'); return new Response('ok'); }
+  if (!slug || !arg) { await sendMessage(env, chatId, 'Usage: /expire slug 7  Â·  /expire slug 2026-12-31  Â·  /expire slug off'); return new Response('ok'); }
 
   if (arg === 'off' || arg === 'never' || arg === 'clear') {
     await updateLink(env, { slug, clearExpiry: true });
-    await sendMessage(env, chatId, `♾ Removed expiry from /${slug}`);
+    await sendMessage(env, chatId, `â™¾ Removed expiry from /${slug}`);
     return new Response('ok');
   }
 
@@ -156,7 +156,7 @@ async function handleExpire(env, chatId, rest) {
     return new Response('ok');
   }
   await updateLink(env, { slug, expiresAt });
-  await sendMessage(env, chatId, `⏳ /${slug} now expires ${new Date(expiresAt).toLocaleString()}`);
+  await sendMessage(env, chatId, `â³ /${slug} now expires ${new Date(expiresAt).toLocaleString()}`);
   return new Response('ok');
 }
 
@@ -168,7 +168,7 @@ async function handleRename(env, chatId, rest) {
   const newSlug = slugify(rp[1] || '');
   if (!slug || !newSlug) { await sendMessage(env, chatId, 'Usage: /rename slug newslug (slug can be the full short link)'); return new Response('ok'); }
   const finalSlug = await updateLink(env, { slug, newSlug });
-  await sendMessage(env, chatId, `✏️ Renamed to /${finalSlug}`);
+  await sendMessage(env, chatId, `âœï¸ Renamed to /${finalSlug}`);
   return new Response('ok');
 }
 
@@ -181,7 +181,7 @@ async function handleEdit(env, chatId, rest) {
   const slug = resolveSlug(rawSlug);
   if (!slug || !/^https?:\/\//i.test(dest)) { await sendMessage(env, chatId, 'Usage: /edit slug https://newdestination.com (slug can be the full short link)'); return new Response('ok'); }
   await updateLink(env, { slug, dest });
-  await sendMessage(env, chatId, `✏️ Updated destination for /${slug}`);
+  await sendMessage(env, chatId, `âœï¸ Updated destination for /${slug}`);
   return new Response('ok');
 }
 
@@ -196,7 +196,7 @@ async function handleAddUser(env, chatId, rest) {
     return new Response('ok');
   }
   await approveUser(env, username, password);
-  await sendMessage(env, chatId, `✅ Approved <b>${username}</b> — they can log in on the website now.`);
+  await sendMessage(env, chatId, `âœ… Approved <b>${username}</b> â€” they can log in on the website now.`);
   return new Response('ok');
 }
 
