@@ -47,4 +47,3 @@ export async function onRequestPost(context) {
 
   return json({ ok: true, message: 'Request sent. An admin needs to approve it before you can log in.' });
 }
-
